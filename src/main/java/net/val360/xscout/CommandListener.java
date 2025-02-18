@@ -1,4 +1,4 @@
-package nl.saccharum.xrpl4j;
+package net.val360.xscout;
 
 import org.json.JSONObject;
 
