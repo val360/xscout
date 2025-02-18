@@ -1,4 +1,4 @@
-package nl.saccharum.xrpl4j;
+package net.val360.xscout;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -56,9 +56,7 @@ public final class XRPLedgerClient extends WebSocketClient {
         request.put("id", id);
 
         if (parameters != null && !parameters.isEmpty()) {
-            parameters.entrySet().stream().forEach(
-                    t -> request.put(t.getKey(), t.getValue())
-            );
+            parameters.forEach(request::put);
         }
 
         send(request.toString());
@@ -84,13 +82,13 @@ public final class XRPLedgerClient extends WebSocketClient {
         checkOpen();
         LOG.info("Unsubscribing from: {}", streams);
         send(composeSubscribe(CMD_UNSUBSCRIBE, streams));
-        streams.forEach(t -> activeSubscriptions.remove(t));
+        streams.forEach(activeSubscriptions::remove);
     }
 
     private String composeSubscribe(String command, EnumSet<StreamSubscription> streams) {
         JSONObject request = new JSONObject();
         request.put(COMMAND, command);
-        request.put(STREAMS, streams.stream().map(t -> t.getName()).collect(Collectors.toList()));
+        request.put(STREAMS, streams.stream().map(StreamSubscription::getName).collect(Collectors.toList()));
         return request.toString();
     }
 
@@ -147,7 +145,7 @@ public final class XRPLedgerClient extends WebSocketClient {
 
     @Override
     public void onError(Exception exception) {
-        LOG.error("XRP ledger client error {}", exception);
+        LOG.error("XRP ledger client error", exception);
         // clear activeSubscriptions and commandListeners?
         // Is onError always followed by an onClose?
     }
