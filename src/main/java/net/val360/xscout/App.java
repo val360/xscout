@@ -1,70 +1,175 @@
 package net.val360.xscout;
 
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.URISyntaxException;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 public class App {
-	private static final Logger LOG = LoggerFactory.getLogger(App.class);
-	private static int txCount = 0;
+    private static final List<String> DEFAULT_TICKERS = Arrays.asList(
+        "AAPL", "MSFT", "GOOG", "AMZN", "NVDA", "TSLA"
+    );
 
-	public static void main(String[] args) throws URISyntaxException, InterruptedException, InvalidStateException {
-		// Get a client.
-		XRPLedgerClient client = new XRPLedgerClient("wss://fh.xrpl.ws");
-		client.connectBlocking(3000, TimeUnit.MILLISECONDS);
+    public static void main(String[] args) throws IOException {
+        CliOptions options = CliOptions.parse(args);
+        YahooFinanceClient client = new YahooFinanceClient();
 
-		// Send a command.
-		client.sendCommand("ledger_current", (response) -> LOG.info(response.toString(4)));
+        List<StockSnapshot> snapshots = new ArrayList<>();
+        for (String ticker : options.tickers) {
+            StockSnapshot snapshot = client.fetchSnapshot(ticker);
+            if (snapshot != null) {
+                snapshots.add(snapshot);
+            }
+        }
 
-		// Send a command with parameters.
-		Map<String, Object> parameters = new HashMap<>();
-		parameters.put("ledger_index", "validated");
-		client.sendCommand("ledger", parameters, (response) -> LOG.info(response.toString(4)));
+        if (snapshots.isEmpty()) {
+            System.out.println("No stock data could be fetched.");
+            return;
+        }
 
-		// Subscribe to the transaction stream (add transactions to a list as they come in).
-		client.subscribe(EnumSet.of(StreamSubscription.TRANSACTIONS), App::processMessage);
+        snapshots.sort(options.sortBy.comparator);
+        if (options.descending) {
+            snapshots.sort(options.sortBy.comparator.reversed());
+        }
 
-		// Tell the client to close when there are no more pending responses
-		// for commands and all subscriptions have been unsubscribed.
-		client.closeWhenComplete();
+        System.out.println("Stock Watchlist");
+        System.out.println("Sort: " + options.sortBy.label + (options.descending ? " (desc)" : " (asc)"));
+        System.out.println();
+        printTable(snapshots);
+    }
 
-		// While we still have a connection check if the number of transactions received
-		// has reached 100. If it has, then unsubscribe from the transaction stream.
-		// This should trigger automatic closing of the client, because of the previous
-		// call to closeWhenComplete() (assuming all commands have been responded to).
-		int count = 100;
-		if (args.length > 0) {
-			try {
-				count = Integer.parseInt(args[0]);
-			} catch (NumberFormatException e) {
-				System.out.println("Invalid argument");
-				e.printStackTrace();
-			}
-		}
-		while (client.isOpen()) {
-			LOG.info("Waiting for messages (transactions received: {})...", txCount);
-			Thread.sleep(100);
-			if (txCount >= count && !client.getActiveSubscriptions().isEmpty()) {
-				client.unsubscribe(client.getActiveSubscriptions());
-			}
-		}
-	}
+    private static void printTable(List<StockSnapshot> snapshots) {
+        String headerFormat = "%-8s %10s %12s %8s %8s %8s %8s %8s%n";
+        String rowFormat = "%-8s %10s %12s %8s %8s %8s %8s %8s%n";
 
-	private static void processMessage(StreamSubscription subscription, JSONObject message) {
-		LOG.info("Got message from subscription {}: {}", subscription.getMessageType(), message);
+        System.out.printf(
+            headerFormat,
+            "Ticker", "Price", "Market Cap", "1D", "5D", "2W", "1M", "3M"
+        );
+        System.out.println(
+            "--------------------------------------------------------------------------------"
+        );
 
-		JSONObject transaction = message.getJSONObject("transaction");
-		String txType = transaction.getString("TransactionType");
-		LOG.info("TX_TYPE: {}",txType);
-		if (txType.equals("OfferCreate") || txType.equals("Payment") || txType.equals("TrustSet")) {
-			System.out.println(transaction);
-			txCount++;
-		}
-	}
+        for (StockSnapshot snapshot : snapshots) {
+            System.out.printf(
+                rowFormat,
+                snapshot.ticker,
+                formatCurrency(snapshot.price),
+                formatMarketCap(snapshot.marketCap),
+                formatPercent(snapshot.change1d),
+                formatPercent(snapshot.change5d),
+                formatPercent(snapshot.change2w),
+                formatPercent(snapshot.change1m),
+                formatPercent(snapshot.change3m)
+            );
+        }
+    }
+
+    private static String formatCurrency(double value) {
+        if (Double.isNaN(value)) {
+            return "N/A";
+        }
+        return String.format(Locale.US, "$%,.2f", value);
+    }
+
+    private static String formatMarketCap(double value) {
+        if (Double.isNaN(value) || value <= 0) {
+            return "N/A";
+        }
+        if (value >= 1_000_000_000_000.0) {
+            return String.format(Locale.US, "$%.2fT", value / 1_000_000_000_000.0);
+        }
+        if (value >= 1_000_000_000.0) {
+            return String.format(Locale.US, "$%.2fB", value / 1_000_000_000.0);
+        }
+        if (value >= 1_000_000.0) {
+            return String.format(Locale.US, "$%.2fM", value / 1_000_000.0);
+        }
+        return String.format(Locale.US, "$%,.0f", value);
+    }
+
+    private static String formatPercent(double value) {
+        if (Double.isNaN(value)) {
+            return "N/A";
+        }
+        return String.format(Locale.US, "%+.2f%%", value);
+    }
+
+    private static final class CliOptions {
+        private final List<String> tickers;
+        private final SortBy sortBy;
+        private final boolean descending;
+
+        private CliOptions(List<String> tickers, SortBy sortBy, boolean descending) {
+            this.tickers = tickers;
+            this.sortBy = sortBy;
+            this.descending = descending;
+        }
+
+        private static CliOptions parse(String[] args) {
+            List<String> tickers = new ArrayList<>(DEFAULT_TICKERS);
+            SortBy sortBy = SortBy.TICKER;
+            boolean descending = false;
+
+            for (String arg : args) {
+                if (arg.startsWith("--tickers=")) {
+                    String tickerArg = arg.substring("--tickers=".length());
+                    List<String> parsedTickers = Arrays.stream(tickerArg.split(","))
+                        .map(String::trim)
+                        .map(String::toUpperCase)
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toList());
+                    if (!parsedTickers.isEmpty()) {
+                        tickers = parsedTickers;
+                    }
+                } else if (arg.startsWith("--sort=")) {
+                    sortBy = SortBy.from(arg.substring("--sort=".length()));
+                } else if ("--desc".equals(arg)) {
+                    descending = true;
+                } else if ("--help".equals(arg)) {
+                    printHelpAndExit();
+                }
+            }
+
+            return new CliOptions(tickers, sortBy, descending);
+        }
+
+        private static void printHelpAndExit() {
+            System.out.println("Usage: mvn compile exec:java -Dexec.args=\"[options]\"");
+            System.out.println();
+            System.out.println("Options:");
+            System.out.println("  --tickers=AAPL,MSFT,TSLA   Comma-separated ticker list");
+            System.out.println("  --sort=ticker|price|marketcap");
+            System.out.println("  --desc                     Sort descending");
+            System.out.println("  --help                     Show this message");
+            System.exit(0);
+        }
+    }
+
+    private enum SortBy {
+        TICKER("ticker", Comparator.comparing(a -> a.ticker)),
+        PRICE("price", Comparator.comparingDouble(a -> a.price)),
+        MARKET_CAP("marketcap", Comparator.comparingDouble(a -> a.marketCap));
+
+        private final String label;
+        private final Comparator<StockSnapshot> comparator;
+
+        SortBy(String label, Comparator<StockSnapshot> comparator) {
+            this.label = label;
+            this.comparator = comparator;
+        }
+
+        private static SortBy from(String input) {
+            for (SortBy value : values()) {
+                if (value.label.equalsIgnoreCase(input.trim())) {
+                    return value;
+                }
+            }
+            System.out.println("Unknown sort option: " + input + " (defaulting to ticker)");
+            return TICKER;
+        }
+    }
 }
