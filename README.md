@@ -7,7 +7,7 @@ A simple Java CLI stock watchlist that prints a sortable table including:
 - Market cap
 - Performance columns: **1D**, **5D**, **2W**, **1M**, **3M**
 
-The app fetches live quote and chart data from Yahoo Finance public endpoints.
+The app fetches live quote and chart data from public Nasdaq endpoints.
 
 ## Run
 
