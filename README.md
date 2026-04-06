@@ -1,5 +1,31 @@
-# xscout
-Java xrpl monitor - subscribes to the transaction stream until it has received 100 transactions of type: Payment,
-TrustSet, or OfferCreate; then closes the client.  Transactions will be printed to stdout in json format.
+# xscout (Stock Watchlist CLI)
 
-To execute run following command: `mvn compile exec:java`
+A simple Java CLI stock watchlist that prints a sortable table including:
+
+- Ticker
+- Current price
+- Market cap
+- Performance columns: **1D**, **5D**, **2W**, **1M**, **3M**
+
+The app fetches live quote and chart data from public Nasdaq endpoints.
+
+## Run
+
+```bash
+mvn compile exec:java
+```
+
+## Options
+
+Pass CLI arguments via `-Dexec.args="..."`:
+
+```bash
+mvn compile exec:java -Dexec.args="--tickers=AAPL,MSFT,NVDA --sort=marketcap --desc"
+```
+
+Supported options:
+
+- `--tickers=AAPL,MSFT,TSLA` comma-separated watchlist (default: `AAPL,MSFT,GOOG,AMZN,NVDA,TSLA`)
+- `--sort=ticker|price|marketcap` sort key (default: `ticker`)
+- `--desc` descending sort order (default is ascending)
+- `--help` show usage
