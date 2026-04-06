@@ -19,9 +19,13 @@ public class App {
 
         List<StockSnapshot> snapshots = new ArrayList<>();
         for (String ticker : options.tickers) {
-            StockSnapshot snapshot = client.fetchSnapshot(ticker);
-            if (snapshot != null) {
-                snapshots.add(snapshot);
+            try {
+                StockSnapshot snapshot = client.fetchSnapshot(ticker);
+                if (snapshot != null) {
+                    snapshots.add(snapshot);
+                }
+            } catch (IOException ex) {
+                System.out.println("Skipping " + ticker + ": " + ex.getMessage());
             }
         }
 
