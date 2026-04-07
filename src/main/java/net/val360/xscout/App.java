@@ -15,7 +15,7 @@ public class App {
 
     public static void main(String[] args) throws IOException {
         CliOptions options = CliOptions.parse(args);
-        NasdaqStockDataClient client = new NasdaqStockDataClient();
+        YahooFinanceStockDataClient client = new YahooFinanceStockDataClient();
 
         List<StockSnapshot> snapshots = new ArrayList<>();
         for (String ticker : options.tickers) {
