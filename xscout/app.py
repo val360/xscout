@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
 import sys
 from dataclasses import dataclass
 from typing import Callable, Sequence
@@ -17,6 +18,9 @@ PERFORMANCE_WINDOWS = [
     ("3M", 63),
 ]
 SORT_CHOICES = ("ticker", "price", "marketcap")
+ENV_TICKERS = "XSCOUT_TICKERS"
+ENV_SORT = "XSCOUT_SORT"
+ENV_DESC = "XSCOUT_DESC"
 
 
 @dataclass(frozen=True)
@@ -40,20 +44,25 @@ class StockSnapshot:
 
 def parse_args(argv: Sequence[str]) -> CliOptions:
     parser = argparse.ArgumentParser(description="Stock Watchlist CLI")
+    env_tickers = os.getenv(ENV_TICKERS, ",".join(DEFAULT_TICKERS))
+    env_sort = _resolve_sort_default(parser)
+    env_desc = _resolve_desc_default(parser)
+
     parser.add_argument(
         "--tickers",
-        default=",".join(DEFAULT_TICKERS),
+        default=env_tickers,
         help="Comma-separated ticker list",
     )
     parser.add_argument(
         "--sort",
-        default="ticker",
+        default=env_sort,
         choices=SORT_CHOICES,
         help="Sort by ticker, price, or market cap",
     )
     parser.add_argument(
         "--desc",
         action="store_true",
+        default=env_desc,
         help="Sort descending",
     )
     args = parser.parse_args(list(argv))
@@ -226,6 +235,26 @@ def _coerce_number(value: object) -> float | None:
     if isinstance(value, (int, float)) and math.isfinite(value):
         return float(value)
     return None
+
+
+def _resolve_sort_default(parser: argparse.ArgumentParser) -> str:
+    raw_value = os.getenv(ENV_SORT, "ticker").strip().lower()
+    if raw_value in SORT_CHOICES:
+        return raw_value
+    parser.error(f"{ENV_SORT} must be one of: {', '.join(SORT_CHOICES)}")
+
+
+def _resolve_desc_default(parser: argparse.ArgumentParser) -> bool:
+    raw_value = os.getenv(ENV_DESC)
+    if raw_value is None:
+        return False
+
+    normalized = raw_value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    parser.error(f"{ENV_DESC} must be a boolean value such as true or false")
 
 
 def _format_row(values: Sequence[str], widths: Sequence[int]) -> str:

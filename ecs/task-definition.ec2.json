@@ -1,0 +1,40 @@
+{
+  "family": "__TASK_FAMILY__",
+  "networkMode": "bridge",
+  "requiresCompatibilities": [
+    "EC2"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "taskRoleArn": "__TASK_ROLE_ARN__",
+  "executionRoleArn": "__EXECUTION_ROLE_ARN__",
+  "containerDefinitions": [
+    {
+      "name": "xscout",
+      "image": "__IMAGE_URI__",
+      "essential": true,
+      "environment": [
+        {
+          "name": "XSCOUT_TICKERS",
+          "value": "__XSCOUT_TICKERS__"
+        },
+        {
+          "name": "XSCOUT_SORT",
+          "value": "__XSCOUT_SORT__"
+        },
+        {
+          "name": "XSCOUT_DESC",
+          "value": "__XSCOUT_DESC__"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/xscout",
+          "awslogs-region": "__AWS_REGION__",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

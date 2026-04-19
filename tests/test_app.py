@@ -1,8 +1,12 @@
+import os
 import unittest
+from unittest import mock
 
 from xscout.app import (
+    CliOptions,
     StockSnapshot,
     compute_performance,
+    parse_args,
     format_market_cap,
     parse_tickers,
     sort_snapshots,
@@ -18,6 +22,38 @@ class ParseTickersTests(unittest.TestCase):
 
     def test_parse_tickers_normalizes_case_and_whitespace(self) -> None:
         self.assertEqual(parse_tickers(" aapl, msft ,nvda "), ["AAPL", "MSFT", "NVDA"])
+
+
+class ParseArgsTests(unittest.TestCase):
+    def test_parse_args_uses_environment_defaults(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                "XSCOUT_TICKERS": "AAPL,NVDA",
+                "XSCOUT_SORT": "marketcap",
+                "XSCOUT_DESC": "true",
+            },
+            clear=False,
+        ):
+            self.assertEqual(
+                parse_args([]),
+                CliOptions(tickers=["AAPL", "NVDA"], sort_by="marketcap", descending=True),
+            )
+
+    def test_cli_arguments_override_environment_defaults(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                "XSCOUT_TICKERS": "AAPL,NVDA",
+                "XSCOUT_SORT": "marketcap",
+                "XSCOUT_DESC": "false",
+            },
+            clear=False,
+        ):
+            self.assertEqual(
+                parse_args(["--tickers", "MSFT", "--sort", "price", "--desc"]),
+                CliOptions(tickers=["MSFT"], sort_by="price", descending=True),
+            )
 
 
 class ComputePerformanceTests(unittest.TestCase):

@@ -1,0 +1,15 @@
+{
+  "Rule": "xscout-schedule",
+  "Targets": [
+    {
+      "Id": "xscout-ecs-task",
+      "Arn": "arn:aws:ecs:__AWS_REGION__:__ACCOUNT_ID__:cluster/__CLUSTER_NAME__",
+      "RoleArn": "arn:aws:iam::__ACCOUNT_ID__:role/__EVENTS_ROLE_NAME__",
+      "EcsParameters": {
+        "TaskDefinitionArn": "arn:aws:ecs:__AWS_REGION__:__ACCOUNT_ID__:task-definition/__TASK_FAMILY__",
+        "TaskCount": 1,
+        "LaunchType": "EC2"
+      }
+    }
+  ]
+}
