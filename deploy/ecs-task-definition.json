@@ -1,0 +1,22 @@
+{
+  "family": "xscout",
+  "networkMode": "bridge",
+  "requiresCompatibilities": ["EC2"],
+  "containerDefinitions": [
+    {
+      "name": "xscout",
+      "image": "<ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/xscout:latest",
+      "essential": true,
+      "memory": 512,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/xscout",
+          "awslogs-region": "<REGION>",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "command": ["python3", "-m", "xscout"]
+    }
+  ]
+}
