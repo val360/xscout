@@ -1,0 +1,30 @@
+{
+  "family": "xscout",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "${EXECUTION_ROLE_ARN}",
+  "taskRoleArn": "${TASK_ROLE_ARN}",
+  "containerDefinitions": [
+    {
+      "name": "xscout",
+      "image": "${ECR_IMAGE_URI}",
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/xscout",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "xscout"
+        }
+      },
+      "environment": [
+        {
+          "name": "XSCOUT_TICKERS",
+          "value": "AAPL,MSFT,GOOG,AMZN,NVDA,TSLA"
+        }
+      ]
+    }
+  ]
+}

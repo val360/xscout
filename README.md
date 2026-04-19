@@ -40,6 +40,36 @@ Supported options:
 - `--desc` descending sort order (default is ascending)
 - `--help` show usage
 
+## Docker
+
+```bash
+docker build -t xscout .
+docker run --rm xscout --tickers=AAPL,NVDA --sort=price --desc
+```
+
+## Deploy to AWS ECS
+
+xscout can run as a scheduled Fargate task on AWS ECS. See
+[deploy/README.md](deploy/README.md) for the full guide. Quick start:
+
+```bash
+# 1. Deploy infrastructure
+aws cloudformation deploy \
+  --template-file deploy/cloudformation.yml \
+  --stack-name xscout \
+  --capabilities CAPABILITY_NAMED_IAM
+
+# 2. Build and push to ECR
+ECR_URI=$(aws cloudformation describe-stacks --stack-name xscout \
+  --query 'Stacks[0].Outputs[?OutputKey==`ECRRepositoryUri`].OutputValue' --output text)
+aws ecr get-login-password | docker login --username AWS --password-stdin "$ECR_URI"
+docker build -t "$ECR_URI:latest" .
+docker push "$ECR_URI:latest"
+```
+
+CI/CD is provided via GitHub Actions — pushes to `master` automatically build,
+push, and deploy. See `.github/workflows/deploy.yml`.
+
 ## Tests
 
 ```bash
