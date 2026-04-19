@@ -45,3 +45,14 @@ Supported options:
 ```bash
 python3 -m unittest discover -s tests
 ```
+
+## Deploying to AWS ECS
+
+A Fargate-ready container image, ECS task definition template, and GitHub
+Actions pipeline are provided. See [`deploy/README.md`](deploy/README.md) for
+the full setup guide. Quick start:
+
+```bash
+docker build -t xscout .
+docker run --rm xscout --tickers=AAPL,MSFT,NVDA --sort=marketcap --desc
+```
