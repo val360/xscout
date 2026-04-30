@@ -1,4 +1,4 @@
-# xscout: stock watchlist CLI (runs once per container start; exit 0 on success)
+# xscout: stock watchlist Flask web app
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -11,5 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY xscout/ ./xscout/
 
-# Default matches README; override at run time, e.g. ECS task overrides or docker run args
-CMD ["python3", "-m", "xscout"]
+EXPOSE 8000
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "xscout.app:app"]

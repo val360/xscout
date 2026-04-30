@@ -1,8 +1,7 @@
-# xscout (Stock Watchlist CLI)
+# xscout (Stock Watchlist Web App)
 
-xscout is now a Python CLI stock watchlist application powered by `yfinance`.
-It prints a sortable table with:
-
+xscout is a Flask stock watchlist application powered by `yfinance`.
+It accepts a list of ticker symbols and displays:
 - Ticker
 - Current price
 - Market cap
@@ -23,22 +22,21 @@ python3 -m pip install -r requirements.txt
 
 ## Run
 
+Start the app locally with Flask:
+
 ```bash
 python3 -m xscout
 ```
 
-## Options
+Then open <http://localhost:5000>.
+
+## Deploy With Gunicorn
 
 ```bash
-python3 -m xscout --tickers=AAPL,MSFT,NVDA --sort=marketcap --desc
+gunicorn xscout.app:app
 ```
 
-Supported options:
-
-- `--tickers=AAPL,MSFT,TSLA` comma-separated watchlist (default: `AAPL,MSFT,GOOG,AMZN,NVDA,TSLA`)
-- `--sort=ticker|price|marketcap` sort key (default: `ticker`)
-- `--desc` descending sort order (default is ascending)
-- `--help` show usage
+The included `Procfile` uses this command for platforms that detect web processes.
 
 ## Tests
 

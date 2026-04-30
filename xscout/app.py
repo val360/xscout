@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import flask
 import math
+import os
+import re
 import sys
 from dataclasses import dataclass
 from typing import Callable, Sequence
@@ -17,6 +20,240 @@ PERFORMANCE_WINDOWS = [
     ("3M", 63),
 ]
 SORT_CHOICES = ("ticker", "price", "marketcap")
+app = flask.Flask(__name__)
+
+PAGE_TEMPLATE = """
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>xscout Stock Watchlist</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f6f7fb;
+            color: #172033;
+        }
+
+        main {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 48px 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid #dfe3ec;
+            border-radius: 18px;
+            box-shadow: 0 14px 40px rgb(23 32 51 / 8%);
+            padding: 28px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            letter-spacing: -0.05em;
+        }
+
+        p {
+            color: #5d687c;
+            line-height: 1.55;
+            margin: 0 0 24px;
+        }
+
+        form {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            border: 1px solid #cbd2df;
+            border-radius: 12px;
+            font: inherit;
+            padding: 14px 16px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 12px;
+            background: #2454ff;
+            color: #ffffff;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 700;
+            padding: 14px 20px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid #e7eaf1;
+            padding: 13px 10px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        th:first-child,
+        td:first-child {
+            text-align: left;
+        }
+
+        th {
+            color: #5d687c;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .empty,
+        .errors {
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+
+        .empty {
+            background: #f0f3f8;
+            color: #5d687c;
+        }
+
+        .errors {
+            background: #fff1f1;
+            color: #8d1f1f;
+            margin-bottom: 20px;
+        }
+
+        .positive {
+            color: #0b7a3b;
+            font-weight: 700;
+        }
+
+        .negative {
+            color: #ba2d2d;
+            font-weight: 700;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #0f1420;
+                color: #eef2f8;
+            }
+
+            .card {
+                background: #151b2a;
+                border-color: #2b3548;
+            }
+
+            p,
+            th,
+            .empty {
+                color: #aab4c5;
+            }
+
+            input {
+                background: #0f1420;
+                border-color: #38445a;
+                color: #eef2f8;
+            }
+
+            th,
+            td {
+                border-bottom-color: #2b3548;
+            }
+
+            .empty {
+                background: #1d2637;
+            }
+        }
+
+        @media (max-width: 640px) {
+            form {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <section class="card">
+            <h1>xscout</h1>
+            <p>Enter comma- or space-separated stock tickers to view current price, market cap, and recent performance.</p>
+
+            <form method="post">
+                <input
+                    name="tickers"
+                    type="text"
+                    value="{{ ticker_input }}"
+                    placeholder="AAPL, MSFT, NVDA"
+                    aria-label="Ticker symbols"
+                    autofocus
+                >
+                <button type="submit">Show Performance</button>
+            </form>
+
+            {% if errors %}
+                <div class="errors">
+                    {% for error in errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if rows %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Price</th>
+                                <th>Market Cap</th>
+                                <th>1D</th>
+                                <th>5D</th>
+                                <th>2W</th>
+                                <th>1M</th>
+                                <th>3M</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    <td><strong>{{ row.ticker }}</strong></td>
+                                    <td>{{ row.price }}</td>
+                                    <td>{{ row.market_cap }}</td>
+                                    <td class="{{ row.change_1d_class }}">{{ row.change_1d }}</td>
+                                    <td class="{{ row.change_5d_class }}">{{ row.change_5d }}</td>
+                                    <td class="{{ row.change_2w_class }}">{{ row.change_2w }}</td>
+                                    <td class="{{ row.change_1m_class }}">{{ row.change_1m }}</td>
+                                    <td class="{{ row.change_3m_class }}">{{ row.change_3m }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty">No stock data to display yet.</div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>
+"""
 
 
 @dataclass(frozen=True)
@@ -65,8 +302,59 @@ def parse_args(argv: Sequence[str]) -> CliOptions:
 
 
 def parse_tickers(raw_tickers: str) -> list[str]:
-    tickers = [ticker.strip().upper() for ticker in raw_tickers.split(",") if ticker.strip()]
+    tickers = [
+        ticker.strip().upper()
+        for ticker in re.split(r"[\s,]+", raw_tickers)
+        if ticker.strip()
+    ]
     return tickers or list(DEFAULT_TICKERS)
+
+
+@app.route("/", methods=["GET", "POST"])
+def index() -> str:
+    ticker_input = flask.request.form.get("tickers", ",".join(DEFAULT_TICKERS))
+    snapshots: list[StockSnapshot] = []
+    errors: list[str] = []
+
+    if flask.request.method == "POST":
+        snapshots, errors = build_watchlist(parse_tickers(ticker_input))
+
+    return flask.render_template_string(
+        PAGE_TEMPLATE,
+        ticker_input=ticker_input,
+        rows=[snapshot_to_row(snapshot) for snapshot in snapshots],
+        errors=errors,
+    )
+
+
+def build_watchlist(tickers: Sequence[str]) -> tuple[list[StockSnapshot], list[str]]:
+    snapshots: list[StockSnapshot] = []
+    errors: list[str] = []
+    for ticker in tickers:
+        try:
+            snapshots.append(fetch_snapshot(ticker))
+        except Exception as exc:  # pragma: no cover - network/library failures are integration behavior.
+            errors.append(f"Skipping {ticker}: {exc}")
+
+    return sort_snapshots(snapshots, "ticker", descending=False), errors
+
+
+def snapshot_to_row(snapshot: StockSnapshot) -> dict[str, str]:
+    return {
+        "ticker": snapshot.ticker,
+        "price": format_currency(snapshot.price),
+        "market_cap": format_market_cap(snapshot.market_cap),
+        "change_1d": format_percent(snapshot.change_1d),
+        "change_1d_class": performance_class(snapshot.change_1d),
+        "change_5d": format_percent(snapshot.change_5d),
+        "change_5d_class": performance_class(snapshot.change_5d),
+        "change_2w": format_percent(snapshot.change_2w),
+        "change_2w_class": performance_class(snapshot.change_2w),
+        "change_1m": format_percent(snapshot.change_1m),
+        "change_1m_class": performance_class(snapshot.change_1m),
+        "change_3m": format_percent(snapshot.change_3m),
+        "change_3m_class": performance_class(snapshot.change_3m),
+    }
 
 
 def fetch_snapshot(ticker: str) -> StockSnapshot:
@@ -200,25 +488,18 @@ def format_percent(value: float | None) -> str:
     return f"{value:+.2f}%"
 
 
+def performance_class(value: float | None) -> str:
+    if value is None or value == 0:
+        return ""
+    if value > 0:
+        return "positive"
+    return "negative"
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    options = parse_args(argv if argv is not None else sys.argv[1:])
-
-    snapshots: list[StockSnapshot] = []
-    for ticker in options.tickers:
-        try:
-            snapshots.append(fetch_snapshot(ticker))
-        except Exception as exc:  # pragma: no cover - network/library failures are integration behavior.
-            print(f"Skipping {ticker}: {exc}")
-
-    if not snapshots:
-        print("No stock data could be fetched.")
-        return 1
-
-    sorted_snapshots = sort_snapshots(snapshots, options.sort_by, options.descending)
-    print("Stock Watchlist")
-    print(f"Sort: {options.sort_by}{' (desc)' if options.descending else ' (asc)'}")
-    print()
-    print(render_table(sorted_snapshots))
+    del argv
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port)
     return 0
 
 

@@ -1,7 +1,9 @@
 import unittest
+from unittest.mock import patch
 
 from xscout.app import (
     StockSnapshot,
+    app,
     compute_performance,
     format_market_cap,
     parse_tickers,
@@ -18,6 +20,9 @@ class ParseTickersTests(unittest.TestCase):
 
     def test_parse_tickers_normalizes_case_and_whitespace(self) -> None:
         self.assertEqual(parse_tickers(" aapl, msft ,nvda "), ["AAPL", "MSFT", "NVDA"])
+
+    def test_parse_tickers_accepts_space_separated_input(self) -> None:
+        self.assertEqual(parse_tickers("aapl msft\nnvda"), ["AAPL", "MSFT", "NVDA"])
 
 
 class ComputePerformanceTests(unittest.TestCase):
@@ -47,6 +52,25 @@ class FormatMarketCapTests(unittest.TestCase):
         self.assertEqual(format_market_cap(1_500_000_000_000.0), "$1.50T")
         self.assertEqual(format_market_cap(2_500_000_000.0), "$2.50B")
         self.assertEqual(format_market_cap(42_000_000.0), "$42.00M")
+
+
+class WebAppTests(unittest.TestCase):
+    def test_post_tickers_renders_watchlist_table(self) -> None:
+        snapshots = {
+            "AAPL": StockSnapshot("AAPL", 180.0, 3_000_000_000_000.0, 1.2, 2.3, 3.4, 4.5, 5.6),
+            "MSFT": StockSnapshot("MSFT", 420.0, 2_500_000_000_000.0, -0.5, 1.0, 2.0, 3.0, 4.0),
+        }
+
+        with patch("xscout.app.fetch_snapshot", side_effect=lambda ticker: snapshots[ticker]):
+            response = app.test_client().post("/", data={"tickers": "msft, aapl"})
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("AAPL", html)
+        self.assertIn("MSFT", html)
+        self.assertIn("$3.00T", html)
+        self.assertIn("+1.20%", html)
+        self.assertIn("-0.50%", html)
 
 
 if __name__ == "__main__":
