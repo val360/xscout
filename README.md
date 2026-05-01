@@ -17,7 +17,8 @@ The app fetches live market data from Yahoo Finance through the `yfinance` libra
 ## Install
 
 ```bash
-python3 -m pip install -r requirements.txt
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
 ```
 
 ## Run
@@ -25,7 +26,7 @@ python3 -m pip install -r requirements.txt
 Start the app locally with Flask:
 
 ```bash
-python3 -m xscout
+.venv/bin/python -m xscout
 ```
 
 Then open <http://localhost:5000>.
@@ -33,7 +34,7 @@ Then open <http://localhost:5000>.
 ## Deploy With Gunicorn
 
 ```bash
-gunicorn xscout.app:app
+.venv/bin/gunicorn xscout.app:app
 ```
 
 The included `Procfile` uses this command for platforms that detect web processes.
@@ -41,5 +42,5 @@ The included `Procfile` uses this command for platforms that detect web processe
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests
+.venv/bin/python -m unittest discover -s tests
 ```

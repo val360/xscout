@@ -12,11 +12,8 @@ from xscout.app import (
 
 
 class ParseTickersTests(unittest.TestCase):
-    def test_empty_ticker_list_falls_back_to_defaults(self) -> None:
-        self.assertEqual(
-            parse_tickers(" , , "),
-            ["AAPL", "MSFT", "GOOG", "AMZN", "NVDA", "TSLA"],
-        )
+    def test_empty_ticker_list_returns_empty_list(self) -> None:
+        self.assertEqual(parse_tickers(" , , "), [])
 
     def test_parse_tickers_normalizes_case_and_whitespace(self) -> None:
         self.assertEqual(parse_tickers(" aapl, msft ,nvda "), ["AAPL", "MSFT", "NVDA"])
@@ -65,6 +62,18 @@ class WebAppTests(unittest.TestCase):
         self.assertIn('id="save-list-button"', html)
         self.assertIn("xscout.savedTickerLists", html)
         self.assertIn("Get Performance", html)
+        self.assertNotIn("Load", html)
+        self.assertNotIn("placeholder=", html)
+        self.assertNotIn("AAPL, MSFT, NVDA", html)
+
+    def test_empty_post_does_not_fall_back_to_default_tickers(self) -> None:
+        with patch("xscout.app.fetch_snapshot") as fetch_snapshot:
+            response = app.test_client().post("/", data={"tickers": ""})
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        fetch_snapshot.assert_not_called()
+        self.assertIn("Enter at least one ticker to show performance.", html)
 
     def test_post_tickers_renders_watchlist_table(self) -> None:
         snapshots = {

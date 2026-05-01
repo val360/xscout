@@ -9,8 +9,10 @@ __pycache__/
 
 # Virtual environments
 .venv/
-venv/
 env/
+
+# IDE
+.idea/
 
 # Test and tool caches
 .pytest_cache/
