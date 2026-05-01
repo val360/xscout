@@ -55,6 +55,17 @@ class FormatMarketCapTests(unittest.TestCase):
 
 
 class WebAppTests(unittest.TestCase):
+    def test_get_page_renders_saved_list_controls(self) -> None:
+        response = app.test_client().get("/")
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Saved ticker lists", html)
+        self.assertIn('id="saved-list-name"', html)
+        self.assertIn('id="save-list-button"', html)
+        self.assertIn("xscout.savedTickerLists", html)
+        self.assertIn("Get Performance", html)
+
     def test_post_tickers_renders_watchlist_table(self) -> None:
         snapshots = {
             "AAPL": StockSnapshot("AAPL", 180.0, 3_000_000_000_000.0, 1.2, 2.3, 3.4, 4.5, 5.6),
