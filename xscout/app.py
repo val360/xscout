@@ -82,6 +82,62 @@ PAGE_TEMPLATE = """
             padding: 14px 16px;
         }
 
+        .saved-lists {
+            border-top: 1px solid #e7eaf1;
+            margin: 0 0 28px;
+            padding-top: 24px;
+        }
+
+        .saved-lists h2 {
+            font-size: 1rem;
+            margin: 0 0 8px;
+        }
+
+        .saved-list-controls {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: minmax(0, 1fr) auto;
+            margin-bottom: 16px;
+        }
+
+        .saved-list-items {
+            display: grid;
+            gap: 12px;
+        }
+
+        .saved-list-card {
+            align-items: center;
+            background: #f8faff;
+            border: 1px solid #e0e6f2;
+            border-radius: 14px;
+            display: grid;
+            gap: 12px;
+            grid-template-columns: minmax(0, 1fr) auto;
+            padding: 14px;
+        }
+
+        .saved-list-card h3 {
+            font-size: 0.98rem;
+            margin: 0 0 4px;
+        }
+
+        .saved-list-card p {
+            font-size: 0.9rem;
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .saved-list-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .saved-list-actions form {
+            margin: 0;
+        }
+
         button {
             border: 0;
             border-radius: 12px;
@@ -91,6 +147,16 @@ PAGE_TEMPLATE = """
             font: inherit;
             font-weight: 700;
             padding: 14px 20px;
+        }
+
+        .secondary-button {
+            background: #e8ecf7;
+            color: #172033;
+        }
+
+        .danger-button {
+            background: #fff1f1;
+            color: #8d1f1f;
         }
 
         .table-wrap {
@@ -172,6 +238,20 @@ PAGE_TEMPLATE = """
                 color: #eef2f8;
             }
 
+            .saved-lists {
+                border-top-color: #2b3548;
+            }
+
+            .saved-list-card {
+                background: #101827;
+                border-color: #2b3548;
+            }
+
+            .secondary-button {
+                background: #273248;
+                color: #eef2f8;
+            }
+
             th,
             td {
                 border-bottom-color: #2b3548;
@@ -183,8 +263,23 @@ PAGE_TEMPLATE = """
         }
 
         @media (max-width: 640px) {
+            form,
+            .saved-list-controls,
+            .saved-list-card {
+                grid-template-columns: 1fr;
+            }
+
             form {
                 flex-direction: column;
+            }
+
+            .saved-list-actions {
+                justify-content: stretch;
+            }
+
+            .saved-list-actions button,
+            .saved-list-controls button {
+                width: 100%;
             }
         }
     </style>
@@ -195,8 +290,9 @@ PAGE_TEMPLATE = """
             <h1>xscout</h1>
             <p>Enter comma- or space-separated stock tickers to view current price, market cap, and recent performance.</p>
 
-            <form method="post">
+            <form id="ticker-form" method="post">
                 <input
+                    id="ticker-input"
                     name="tickers"
                     type="text"
                     value="{{ ticker_input }}"
@@ -206,6 +302,22 @@ PAGE_TEMPLATE = """
                 >
                 <button type="submit">Show Performance</button>
             </form>
+
+            <section class="saved-lists" aria-labelledby="saved-lists-heading">
+                <h2 id="saved-lists-heading">Saved ticker lists</h2>
+                <p>Save the current tickers in this browser, then run performance for any saved list.</p>
+                <div class="saved-list-controls">
+                    <input
+                        id="saved-list-name"
+                        type="text"
+                        placeholder="List name, e.g. AI leaders"
+                        aria-label="Saved list name"
+                    >
+                    <button id="save-list-button" type="button">Save Current List</button>
+                </div>
+                <div id="saved-list-message" class="empty" role="status"></div>
+                <div id="saved-list-items" class="saved-list-items" aria-live="polite"></div>
+            </section>
 
             {% if errors %}
                 <div class="errors">
@@ -251,6 +363,145 @@ PAGE_TEMPLATE = """
             {% endif %}
         </section>
     </main>
+    <script>
+        (function () {
+            var STORAGE_KEY = "xscout.savedTickerLists";
+            var tickerInput = document.getElementById("ticker-input");
+            var nameInput = document.getElementById("saved-list-name");
+            var saveButton = document.getElementById("save-list-button");
+            var message = document.getElementById("saved-list-message");
+            var listItems = document.getElementById("saved-list-items");
+
+            function readSavedLists() {
+                try {
+                    var parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]");
+                    if (!Array.isArray(parsed)) {
+                        return [];
+                    }
+                    return parsed.filter(function (item) {
+                        return item && typeof item.name === "string" && typeof item.tickers === "string";
+                    });
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            function writeSavedLists(savedLists) {
+                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedLists));
+            }
+
+            function normalizeName(name) {
+                return name.trim().replace(/\\s+/g, " ");
+            }
+
+            function setMessage(text) {
+                message.textContent = text;
+            }
+
+            function renderSavedLists() {
+                var savedLists = readSavedLists();
+                listItems.innerHTML = "";
+
+                if (savedLists.length === 0) {
+                    setMessage("No saved lists yet.");
+                    return;
+                }
+
+                setMessage(savedLists.length + " saved " + (savedLists.length === 1 ? "list." : "lists."));
+                savedLists.forEach(function (savedList, index) {
+                    var card = document.createElement("article");
+                    card.className = "saved-list-card";
+
+                    var details = document.createElement("div");
+                    var title = document.createElement("h3");
+                    title.textContent = savedList.name;
+                    var tickers = document.createElement("p");
+                    tickers.textContent = savedList.tickers;
+                    details.appendChild(title);
+                    details.appendChild(tickers);
+
+                    var actions = document.createElement("div");
+                    actions.className = "saved-list-actions";
+
+                    var performanceForm = document.createElement("form");
+                    performanceForm.method = "post";
+                    var hiddenTickers = document.createElement("input");
+                    hiddenTickers.type = "hidden";
+                    hiddenTickers.name = "tickers";
+                    hiddenTickers.value = savedList.tickers;
+                    var performanceButton = document.createElement("button");
+                    performanceButton.type = "submit";
+                    performanceButton.textContent = "Get Performance";
+                    performanceForm.appendChild(hiddenTickers);
+                    performanceForm.appendChild(performanceButton);
+
+                    var loadButton = document.createElement("button");
+                    loadButton.type = "button";
+                    loadButton.className = "secondary-button";
+                    loadButton.textContent = "Load";
+                    loadButton.addEventListener("click", function () {
+                        tickerInput.value = savedList.tickers;
+                        nameInput.value = savedList.name;
+                        setMessage("Loaded " + savedList.name + ".");
+                    });
+
+                    var deleteButton = document.createElement("button");
+                    deleteButton.type = "button";
+                    deleteButton.className = "danger-button";
+                    deleteButton.textContent = "Delete";
+                    deleteButton.addEventListener("click", function () {
+                        var nextLists = readSavedLists();
+                        nextLists.splice(index, 1);
+                        writeSavedLists(nextLists);
+                        renderSavedLists();
+                    });
+
+                    actions.appendChild(performanceForm);
+                    actions.appendChild(loadButton);
+                    actions.appendChild(deleteButton);
+                    card.appendChild(details);
+                    card.appendChild(actions);
+                    listItems.appendChild(card);
+                });
+            }
+
+            saveButton.addEventListener("click", function () {
+                var name = normalizeName(nameInput.value);
+                var tickers = tickerInput.value.trim();
+
+                if (!name) {
+                    setMessage("Enter a name before saving this list.");
+                    nameInput.focus();
+                    return;
+                }
+
+                if (!tickers) {
+                    setMessage("Enter at least one ticker before saving this list.");
+                    tickerInput.focus();
+                    return;
+                }
+
+                var savedLists = readSavedLists();
+                var existingIndex = savedLists.findIndex(function (savedList) {
+                    return savedList.name.toLowerCase() === name.toLowerCase();
+                });
+                var savedList = { name: name, tickers: tickers };
+
+                if (existingIndex >= 0) {
+                    savedLists[existingIndex] = savedList;
+                    setMessage("Updated " + name + ".");
+                } else {
+                    savedLists.push(savedList);
+                    setMessage("Saved " + name + ".");
+                }
+
+                writeSavedLists(savedLists);
+                renderSavedLists();
+            });
+
+            renderSavedLists();
+        }());
+    </script>
 </body>
 </html>
 """
