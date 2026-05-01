@@ -391,7 +391,7 @@ PAGE_TEMPLATE = """
             }
 
             function normalizeName(name) {
-                return name.trim().replace(/\s+/g, " ");
+                return name.trim().replace(/\\s+/g, " ");
             }
 
             function setMessage(text) {
