@@ -52,45 +52,49 @@ class FormatMarketCapTests(unittest.TestCase):
 
 
 class WebAppTests(unittest.TestCase):
-    def test_get_page_renders_saved_list_controls(self) -> None:
+    def test_get_page_serves_frontend_entrypoint(self) -> None:
         response = app.test_client().get("/")
+        self.addCleanup(response.close)
 
-        html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Saved ticker lists", html)
-        self.assertIn('id="saved-list-name"', html)
-        self.assertIn('id="save-list-button"', html)
-        self.assertIn("xscout.savedTickerLists", html)
-        self.assertIn("Get Performance", html)
-        self.assertNotIn("Load", html)
-        self.assertNotIn("placeholder=", html)
-        self.assertNotIn("AAPL, MSFT, NVDA", html)
+        self.assertIn(response.mimetype, {"text/html", "text/plain"})
 
-    def test_empty_post_does_not_fall_back_to_default_tickers(self) -> None:
-        with patch("xscout.app.fetch_snapshot") as fetch_snapshot:
-            response = app.test_client().post("/", data={"tickers": ""})
+    def test_empty_api_request_does_not_fall_back_to_default_tickers(self) -> None:
+        with patch("xscout.market_data.fetch_snapshot") as fetch_snapshot:
+            response = app.test_client().post(
+                "/api/watchlists/performance",
+                json={"tickers": []},
+            )
 
-        html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
         fetch_snapshot.assert_not_called()
-        self.assertIn("Enter at least one ticker to show performance.", html)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "rows": [],
+                "errors": ["Enter at least one ticker to show performance."],
+            },
+        )
 
-    def test_post_tickers_renders_watchlist_table(self) -> None:
+    def test_api_returns_watchlist_performance_rows(self) -> None:
         snapshots = {
             "AAPL": StockSnapshot("AAPL", 180.0, 3_000_000_000_000.0, 1.2, 2.3, 3.4, 4.5, 5.6),
             "MSFT": StockSnapshot("MSFT", 420.0, 2_500_000_000_000.0, -0.5, 1.0, 2.0, 3.0, 4.0),
         }
 
-        with patch("xscout.app.fetch_snapshot", side_effect=lambda ticker: snapshots[ticker]):
-            response = app.test_client().post("/", data={"tickers": "msft, aapl"})
+        with patch("xscout.market_data.fetch_snapshot", side_effect=lambda ticker: snapshots[ticker]):
+            response = app.test_client().post(
+                "/api/watchlists/performance",
+                json={"tickers": ["msft", "aapl"]},
+            )
 
-        html = response.get_data(as_text=True)
+        payload = response.get_json()
         self.assertEqual(response.status_code, 200)
-        self.assertIn("AAPL", html)
-        self.assertIn("MSFT", html)
-        self.assertIn("$3.00T", html)
-        self.assertIn("+1.20%", html)
-        self.assertIn("-0.50%", html)
+        self.assertEqual(payload["errors"], [])
+        self.assertEqual([row["ticker"] for row in payload["rows"]], ["AAPL", "MSFT"])
+        self.assertEqual(payload["rows"][0]["marketCap"], "$3.00T")
+        self.assertEqual(payload["rows"][0]["change1d"], "+1.20%")
+        self.assertEqual(payload["rows"][1]["change1d"], "-0.50%")
 
 
 if __name__ == "__main__":

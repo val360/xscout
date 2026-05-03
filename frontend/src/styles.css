@@ -1,0 +1,260 @@
+:root {
+  color-scheme: light dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f6f7fb;
+  color: #172033;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 12px;
+  background: #2454ff;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 12px 18px;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+input,
+textarea {
+  border: 1px solid #cbd2df;
+  border-radius: 12px;
+  color: #172033;
+  background: #ffffff;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+}
+
+.toolbar {
+  align-items: center;
+  background: rgb(255 255 255 / 92%);
+  border-bottom: 1px solid #dfe3ec;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  padding: 18px 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.toolbar h1 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  letter-spacing: -0.05em;
+  margin: 0 0 4px;
+}
+
+.toolbar p,
+.ticker-node p {
+  color: #5d687c;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.canvas {
+  min-height: 0;
+}
+
+.react-flow {
+  background: radial-gradient(circle at 1px 1px, #dfe3ec 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.ticker-node {
+  background: #ffffff;
+  border: 1px solid #dfe3ec;
+  border-radius: 18px;
+  box-shadow: 0 14px 40px rgb(23 32 51 / 8%);
+  color: #172033;
+  display: grid;
+  gap: 14px;
+  min-width: 760px;
+  padding: 18px;
+}
+
+.ticker-node__header {
+  align-items: start;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ticker-node__title {
+  border: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  padding-left: 0;
+}
+
+.ticker-node__label {
+  color: #5d687c;
+  display: grid;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.ticker-node__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.danger-button {
+  background: #fff1f1;
+  color: #8d1f1f;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e7eaf1;
+  padding: 11px 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+th {
+  color: #5d687c;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.empty,
+.errors {
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.empty {
+  background: #f0f3f8;
+  color: #5d687c;
+}
+
+.errors {
+  background: #fff1f1;
+  color: #8d1f1f;
+}
+
+.positive {
+  color: #0b7a3b;
+  font-weight: 700;
+}
+
+.negative {
+  color: #ba2d2d;
+  font-weight: 700;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    background: #0f1420;
+    color: #eef2f8;
+  }
+
+  .toolbar,
+  .ticker-node {
+    background: #151b2a;
+    border-color: #2b3548;
+    color: #eef2f8;
+  }
+
+  .react-flow {
+    background: radial-gradient(circle at 1px 1px, #2b3548 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  input,
+  textarea {
+    background: #0f1420;
+    border-color: #38445a;
+    color: #eef2f8;
+  }
+
+  .toolbar p,
+  .ticker-node p,
+  .ticker-node__label,
+  th,
+  .empty {
+    color: #aab4c5;
+  }
+
+  th,
+  td {
+    border-bottom-color: #2b3548;
+  }
+
+  .empty {
+    background: #1d2637;
+  }
+}
+
+@media (max-width: 800px) {
+  .toolbar,
+  .ticker-node__header {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    align-items: stretch;
+    display: grid;
+  }
+
+  .toolbar__actions,
+  .toolbar__actions button {
+    width: 100%;
+  }
+
+  .ticker-node {
+    min-width: 560px;
+  }
+}

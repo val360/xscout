@@ -4,11 +4,15 @@
 **/*.pyc
 .venv
 env
+node_modules
+frontend/node_modules
 .pytest_cache
 .mypy_cache
 .ruff_cache
 build
 dist
+frontend/dist
+xscout/static/app
 *.egg-info
 *.log
 tests

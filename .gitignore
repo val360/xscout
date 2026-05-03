@@ -10,6 +10,8 @@ __pycache__/
 # Virtual environments
 .venv/
 env/
+node_modules/
+frontend/node_modules/
 
 # IDE
 .idea/
@@ -23,3 +25,4 @@ env/
 build/
 dist/
 *.egg-info/
+xscout/static/app/

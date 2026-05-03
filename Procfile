@@ -1,1 +1,1 @@
-web: gunicorn xscout.app:app
+web: gunicorn --bind 0.0.0.0:$PORT xscout.app:app
