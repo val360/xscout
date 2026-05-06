@@ -101,9 +101,10 @@ textarea {
   box-shadow: 0 14px 40px rgb(23 32 51 / 8%);
   color: #172033;
   display: grid;
-  gap: 14px;
-  min-width: 760px;
-  padding: 18px;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  width: 560px;
 }
 
 .ticker-node__header {
@@ -141,18 +142,34 @@ textarea {
 }
 
 .table-wrap {
+  border: 1px solid #e7eaf1;
+  border-radius: 12px;
   overflow-x: auto;
+  scrollbar-gutter: stable;
 }
 
 table {
   border-collapse: collapse;
-  width: 100%;
+  width: max-content;
+}
+
+.performance-table {
+  --ticker-column-width: 5.5rem;
+  --price-column-width: 5.25rem;
+  --market-cap-column-width: 6.75rem;
+  --one-day-column-width: 4.25rem;
+
+  min-width: calc(
+    var(--ticker-column-width) + var(--price-column-width) + var(--market-cap-column-width) +
+      var(--one-day-column-width) + 17rem
+  );
 }
 
 th,
 td {
   border-bottom: 1px solid #e7eaf1;
-  padding: 11px 8px;
+  background: #ffffff;
+  padding: 8px 6px;
   text-align: right;
   white-space: nowrap;
 }
@@ -164,9 +181,57 @@ td:first-child {
 
 th {
   color: #5d687c;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.performance-table th,
+.performance-table td {
+  width: 4.25rem;
+}
+
+.performance-table th:nth-child(1),
+.performance-table td:nth-child(1) {
+  left: 0;
+  min-width: var(--ticker-column-width);
+  position: sticky;
+  width: var(--ticker-column-width);
+  z-index: 1;
+}
+
+.performance-table th:nth-child(2),
+.performance-table td:nth-child(2) {
+  left: var(--ticker-column-width);
+  min-width: var(--price-column-width);
+  position: sticky;
+  width: var(--price-column-width);
+  z-index: 1;
+}
+
+.performance-table th:nth-child(3),
+.performance-table td:nth-child(3) {
+  left: calc(var(--ticker-column-width) + var(--price-column-width));
+  min-width: var(--market-cap-column-width);
+  position: sticky;
+  width: var(--market-cap-column-width);
+  z-index: 1;
+}
+
+.performance-table th:nth-child(4),
+.performance-table td:nth-child(4) {
+  box-shadow: 10px 0 14px -14px rgb(23 32 51 / 65%);
+  left: calc(
+    var(--ticker-column-width) + var(--price-column-width) + var(--market-cap-column-width)
+  );
+  min-width: var(--one-day-column-width);
+  position: sticky;
+  width: var(--one-day-column-width);
+  z-index: 1;
+}
+
+.performance-table th:nth-child(-n + 4) {
+  z-index: 2;
 }
 
 .empty,
@@ -228,9 +293,15 @@ th {
     color: #aab4c5;
   }
 
+  .table-wrap,
   th,
   td {
+    background: #151b2a;
     border-bottom-color: #2b3548;
+  }
+
+  .table-wrap {
+    border-color: #2b3548;
   }
 
   .empty {
@@ -255,6 +326,6 @@ th {
   }
 
   .ticker-node {
-    min-width: 560px;
+    width: min(520px, calc(100vw - 32px));
   }
 }

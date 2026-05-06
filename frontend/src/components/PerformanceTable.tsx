@@ -19,7 +19,7 @@ export function PerformanceTable({ rows }: PerformanceTableProps) {
 
   return (
     <div className="table-wrap">
-      <table>
+      <table className="performance-table" aria-label="Watchlist performance">
         <thead>
           <tr>
             <th>Ticker</th>
