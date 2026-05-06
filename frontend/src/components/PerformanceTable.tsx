@@ -18,13 +18,25 @@ export function PerformanceTable({ rows }: PerformanceTableProps) {
   }
 
   return (
-    <div className="table-wrap">
-      <table>
+    <div
+      className="table-wrap performance-scroll"
+      tabIndex={0}
+      role="region"
+      aria-label="Performance table; scroll horizontally for additional periods"
+    >
+      <table className="performance-table">
+        <colgroup>
+          <col className="perf-w1" />
+          <col className="perf-w2" />
+          <col className="perf-w3" />
+          <col className="perf-w4" />
+          <col span={4} />
+        </colgroup>
         <thead>
           <tr>
             <th>Ticker</th>
             <th>Price</th>
-            <th>Market Cap</th>
+            <th>Mkt cap</th>
             {performanceColumns.map(([label]) => (
               <th key={label}>{label}</th>
             ))}
