@@ -97,25 +97,26 @@ textarea {
 .ticker-node {
   background: #ffffff;
   border: 1px solid #dfe3ec;
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: 0 14px 40px rgb(23 32 51 / 8%);
   color: #172033;
   display: grid;
-  gap: 14px;
-  min-width: 760px;
-  padding: 18px;
+  gap: 10px;
+  min-width: 460px;
+  max-width: 460px;
+  padding: 14px;
 }
 
 .ticker-node__header {
   align-items: start;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .ticker-node__title {
   border: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   padding-left: 0;
@@ -124,15 +125,21 @@ textarea {
 .ticker-node__label {
   color: #5d687c;
   display: grid;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  gap: 6px;
+  gap: 4px;
   text-transform: uppercase;
 }
 
 .ticker-node__actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.ticker-node button {
+  border-radius: 10px;
+  font-size: 0.85rem;
+  padding: 8px 14px;
 }
 
 .danger-button {
@@ -142,17 +149,21 @@ textarea {
 
 .table-wrap {
   overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
 }
 
 th,
 td {
+  background: #ffffff;
   border-bottom: 1px solid #e7eaf1;
-  padding: 11px 8px;
+  font-size: 0.85rem;
+  padding: 6px 8px;
   text-align: right;
   white-space: nowrap;
 }
@@ -164,9 +175,36 @@ td:first-child {
 
 th {
   color: #5d687c;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.performance-table .sticky-col {
+  position: sticky;
+  z-index: 1;
+}
+
+.performance-table thead .sticky-col {
+  z-index: 2;
+}
+
+.performance-table .sticky-col--1 {
+  left: 0;
+}
+
+.performance-table .sticky-col--2 {
+  left: 56px;
+}
+
+.performance-table .sticky-col--3 {
+  left: 116px;
+}
+
+.performance-table .sticky-col--4 {
+  border-right: 1px solid #e7eaf1;
+  box-shadow: 4px 0 6px -4px rgb(23 32 51 / 12%);
+  left: 196px;
 }
 
 .empty,
@@ -230,7 +268,13 @@ th {
 
   th,
   td {
+    background: #151b2a;
     border-bottom-color: #2b3548;
+  }
+
+  .performance-table .sticky-col--4 {
+    border-right-color: #2b3548;
+    box-shadow: 4px 0 6px -4px rgb(0 0 0 / 40%);
   }
 
   .empty {
@@ -255,6 +299,7 @@ th {
   }
 
   .ticker-node {
-    min-width: 560px;
+    max-width: 100%;
+    min-width: 360px;
   }
 }

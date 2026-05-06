@@ -19,30 +19,37 @@ export function PerformanceTable({ rows }: PerformanceTableProps) {
 
   return (
     <div className="table-wrap">
-      <table>
+      <table className="performance-table">
         <thead>
           <tr>
-            <th>Ticker</th>
-            <th>Price</th>
-            <th>Market Cap</th>
-            {performanceColumns.map(([label]) => (
-              <th key={label}>{label}</th>
+            <th className="sticky-col sticky-col--1">Ticker</th>
+            <th className="sticky-col sticky-col--2">Price</th>
+            <th className="sticky-col sticky-col--3">Market Cap</th>
+            {performanceColumns.map(([label], index) => (
+              <th key={label} className={index === 0 ? 'sticky-col sticky-col--4' : undefined}>
+                {label}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.ticker}>
-              <td>
+              <td className="sticky-col sticky-col--1">
                 <strong>{row.ticker}</strong>
               </td>
-              <td>{row.price}</td>
-              <td>{row.marketCap}</td>
-              {performanceColumns.map(([label, valueKey, classKey]) => (
-                <td key={label} className={row[classKey]}>
-                  {row[valueKey]}
-                </td>
-              ))}
+              <td className="sticky-col sticky-col--2">{row.price}</td>
+              <td className="sticky-col sticky-col--3">{row.marketCap}</td>
+              {performanceColumns.map(([label, valueKey, classKey], index) => {
+                const stickyClass = index === 0 ? 'sticky-col sticky-col--4' : '';
+                const valueClass = row[classKey];
+                const className = [stickyClass, valueClass].filter(Boolean).join(' ');
+                return (
+                  <td key={label} className={className || undefined}>
+                    {row[valueKey]}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
