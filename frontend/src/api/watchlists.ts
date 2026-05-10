@@ -12,6 +12,12 @@ export type PerformanceRow = {
   change1mClass: string;
   change3m: string;
   change3mClass: string;
+  change6m: string;
+  change6mClass: string;
+  change1y: string;
+  change1yClass: string;
+  change5y: string;
+  change5yClass: string;
 };
 
 export type WatchlistPerformanceResponse = {

@@ -18,6 +18,12 @@ def snapshot_to_row(snapshot: StockSnapshot) -> dict[str, str]:
         "change1mClass": performance_class(snapshot.change_1m),
         "change3m": format_percent(snapshot.change_3m),
         "change3mClass": performance_class(snapshot.change_3m),
+        "change6m": format_percent(snapshot.change_6m),
+        "change6mClass": performance_class(snapshot.change_6m),
+        "change1y": format_percent(snapshot.change_1y),
+        "change1yClass": performance_class(snapshot.change_1y),
+        "change5y": format_percent(snapshot.change_5y),
+        "change5yClass": performance_class(snapshot.change_5y),
     }
 
 

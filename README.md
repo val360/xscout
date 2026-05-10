@@ -32,14 +32,22 @@ Start the Flask API locally:
 .venv/bin/python -m xscout
 ```
 
-In another terminal, start the React dev server:
+In another terminal, start the React frontend dev server:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Then open the Vite URL printed in the terminal. API requests are proxied to Flask.
+Then open the Vite URL printed in the terminal, usually <http://localhost:5173>.
+Keep the Flask API running at the same time; frontend API requests are proxied to Flask.
+
+If this is your first frontend run, install the frontend dependencies first:
+
+```bash
+cd frontend
+npm install
+```
 
 ## Production Build
 

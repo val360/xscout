@@ -31,6 +31,7 @@ function createTickerNode(position: { x: number; y: number }): Node<TickerListNo
     id: createNodeId(),
     type: 'tickerList',
     position,
+    style: { width: 560 },
     data: {
       name: 'New ticker list',
       tickers: ['AAPL', 'MSFT', 'NVDA'],
@@ -186,6 +187,10 @@ export default function App() {
     () =>
       nodes.map((node) => ({
         ...node,
+        style: {
+          width: 560,
+          ...node.style,
+        },
         data: {
           ...node.data,
           onDelete: deleteNode,

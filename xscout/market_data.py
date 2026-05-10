@@ -13,6 +13,9 @@ PERFORMANCE_WINDOWS = [
     ("2W", 10),
     ("1M", 21),
     ("3M", 63),
+    ("6M", 126),
+    ("1Y", 252),
+    ("5Y", 1260),
 ]
 
 
@@ -26,6 +29,9 @@ class StockSnapshot:
     change_2w: float | None
     change_1m: float | None
     change_3m: float | None
+    change_6m: float | None
+    change_1y: float | None
+    change_5y: float | None
 
 
 def parse_tickers(raw_tickers: str) -> list[str]:
@@ -51,7 +57,7 @@ def build_watchlist(tickers: Sequence[str]) -> tuple[list[StockSnapshot], list[s
 def fetch_snapshot(ticker: str) -> StockSnapshot:
     stock = yf.Ticker(ticker)
     fast_info = stock.fast_info
-    history = stock.history(period="6mo", interval="1d", auto_adjust=False)
+    history = stock.history(period="5y", interval="1d", auto_adjust=False)
 
     closes = []
     if "Close" in history:
@@ -88,6 +94,9 @@ def fetch_snapshot(ticker: str) -> StockSnapshot:
         change_2w=performance_by_window[10],
         change_1m=performance_by_window[21],
         change_3m=performance_by_window[63],
+        change_6m=performance_by_window[126],
+        change_1y=performance_by_window[252],
+        change_5y=performance_by_window[1260],
     )
 
 

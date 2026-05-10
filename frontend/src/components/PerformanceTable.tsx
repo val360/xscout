@@ -10,6 +10,9 @@ const performanceColumns = [
   ['2W', 'change2w', 'change2wClass'],
   ['1M', 'change1m', 'change1mClass'],
   ['3M', 'change3m', 'change3mClass'],
+  ['6M', 'change6m', 'change6mClass'],
+  ['1Y', 'change1y', 'change1yClass'],
+  ['5Y', 'change5y', 'change5yClass'],
 ] as const;
 
 export function PerformanceTable({ rows }: PerformanceTableProps) {
@@ -18,7 +21,7 @@ export function PerformanceTable({ rows }: PerformanceTableProps) {
   }
 
   return (
-    <div className="table-wrap">
+    <div className="table-wrap nodrag nowheel">
       <table className="performance-table" aria-label="Watchlist performance">
         <thead>
           <tr>

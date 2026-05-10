@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import type { NodeProps } from '@xyflow/react';
+import { NodeResizer, type NodeProps } from '@xyflow/react';
 import type { PerformanceRow } from '../api/watchlists';
 import { formatTickers, parseTickers } from '../storage/savedLists';
 import { PerformanceTable } from './PerformanceTable';
@@ -17,7 +17,7 @@ export type TickerListNodeData = {
   onUpdate?: (nodeId: string, updates: Partial<TickerListNodeData>) => void;
 } & Record<string, unknown>;
 
-function TickerListNodeComponent({ id, data }: NodeProps) {
+function TickerListNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as TickerListNodeData;
   const [name, setName] = useState(nodeData.name);
   const [tickers, setTickers] = useState(formatTickers(nodeData.tickers));
@@ -34,8 +34,9 @@ function TickerListNodeComponent({ id, data }: NodeProps) {
 
   return (
     <article className="ticker-node">
+      <NodeResizer isVisible={selected} minWidth={360} minHeight={260} />
       <header className="ticker-node__header">
-        <div>
+        <div className="ticker-node__title-row">
           <input
             className="ticker-node__title nodrag"
             aria-label="Ticker list name"
@@ -43,11 +44,21 @@ function TickerListNodeComponent({ id, data }: NodeProps) {
             onChange={(event) => setName(event.target.value)}
             onBlur={saveChanges}
           />
-          <p>{nodeData.tickers.length} tickers</p>
+          <button
+            className="danger-button icon-button nodrag"
+            type="button"
+            aria-label={`Delete ${name.trim() || 'this list'}`}
+            onClick={() => nodeData.onDelete?.(id)}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+              <path
+                d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
         </div>
-        <button className="danger-button nodrag" type="button" onClick={() => nodeData.onDelete?.(id)}>
-          Delete
-        </button>
+        <p>{nodeData.tickers.length} tickers</p>
       </header>
 
       <label className="ticker-node__label">
