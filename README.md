@@ -5,7 +5,10 @@ It lets you arrange ticker lists on a React Flow canvas and displays:
 - Ticker
 - Current price
 - Market cap
-- Performance columns: **1D**, **5D**, **2W**, **1M**, **3M**
+- Performance columns: **1D**, **5D**, **2W**, **1M**, **3M**, **6M**, **1Y**, **5Y**
+
+Ticker lists are persisted in Postgres (one row per list). The canvas
+layout — node positions, edges, viewport — is kept in `localStorage`.
 
 The app fetches live market data from Yahoo Finance through the `yfinance` library.
 
@@ -13,6 +16,7 @@ The app fetches live market data from Yahoo Finance through the `yfinance` libra
 
 - Python 3.10+
 - Node.js 22+
+- Postgres 13+ (Railway-managed in production, local Docker for dev)
 - Internet access for Yahoo Finance requests
 
 ## Install
@@ -24,9 +28,25 @@ cd frontend
 npm install
 ```
 
+## Database
+
+The app reads `DATABASE_URL`. For local development, start the bundled Postgres via:
+
+```bash
+docker compose up -d postgres
+export DATABASE_URL=postgresql://xscout:xscout@localhost:5432/xscout
+```
+
+Migrations run automatically the first time the app starts and are idempotent.
+They are serialised across replicas with a Postgres advisory lock.
+
+Existing browsers that have a canvas saved in `localStorage` are migrated
+automatically on first load: each inline list is uploaded to the server,
+then the local copy is reduced to layout-only.
+
 ## Run
 
-Start the Flask API locally:
+Start the Flask API locally (with `DATABASE_URL` exported):
 
 ```bash
 .venv/bin/python -m xscout
@@ -70,8 +90,19 @@ The included `Dockerfile` builds the React frontend and serves it from the same 
 
 ## Tests
 
+The default test suite mocks the database and runs without Postgres:
+
 ```bash
 .venv/bin/python -m unittest discover -s tests
 cd frontend
 npm run build
+```
+
+To exercise the integration tests against a real Postgres, bring up the
+local container and point the suite at it:
+
+```bash
+docker compose up -d postgres
+TEST_DATABASE_URL=postgresql://xscout:xscout@localhost:5432/xscout \
+  .venv/bin/python -m unittest discover -s tests
 ```
