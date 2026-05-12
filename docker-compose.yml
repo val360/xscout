@@ -1,0 +1,23 @@
+# Local development helper. Boots a Postgres instance with the same
+# credentials documented in the README so `.venv/bin/python -m xscout`
+# and the test suite (`TEST_DATABASE_URL=...`) can connect against it.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: xscout
+      POSTGRES_PASSWORD: xscout
+      POSTGRES_DB: xscout
+    ports:
+      - "5432:5432"
+    volumes:
+      - xscout-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xscout -d xscout"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  xscout-postgres-data:
