@@ -35,9 +35,9 @@ class ComputePerformanceTests(unittest.TestCase):
 class SortSnapshotsTests(unittest.TestCase):
     def test_numeric_sort_keeps_missing_values_last(self) -> None:
         snapshots = [
-            StockSnapshot("AAPL", 180.0, 3_000_000_000_000.0, None, None, None, None, None),
-            StockSnapshot("MSFT", None, 2_500_000_000_000.0, None, None, None, None, None),
-            StockSnapshot("NVDA", 120.0, 2_000_000_000_000.0, None, None, None, None, None),
+            StockSnapshot("AAPL", 180.0, 3_000_000_000_000.0, None, None, None, None, None, None, None, None),
+            StockSnapshot("MSFT", None, 2_500_000_000_000.0, None, None, None, None, None, None, None, None),
+            StockSnapshot("NVDA", 120.0, 2_000_000_000_000.0, None, None, None, None, None, None, None, None),
         ]
 
         ordered = sort_snapshots(snapshots, "price", descending=True)
@@ -78,8 +78,8 @@ class WebAppTests(unittest.TestCase):
 
     def test_api_returns_watchlist_performance_rows(self) -> None:
         snapshots = {
-            "AAPL": StockSnapshot("AAPL", 180.0, 3_000_000_000_000.0, 1.2, 2.3, 3.4, 4.5, 5.6),
-            "MSFT": StockSnapshot("MSFT", 420.0, 2_500_000_000_000.0, -0.5, 1.0, 2.0, 3.0, 4.0),
+            "AAPL": StockSnapshot("AAPL", 180.0, 3_000_000_000_000.0, 1.2, 2.3, 3.4, 4.5, 5.6, 6.7, 7.8, 8.9),
+            "MSFT": StockSnapshot("MSFT", 420.0, 2_500_000_000_000.0, -0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0),
         }
 
         with patch("xscout.market_data.fetch_snapshot", side_effect=lambda ticker: snapshots[ticker]):
