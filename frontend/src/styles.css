@@ -288,6 +288,25 @@ textarea {
   padding-left: 0;
 }
 
+.ticker-node__header-actions {
+  align-items: center;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.ticker-node__close-button {
+  background: #ffffff;
+  border: 1px solid #dfe3ec;
+  border-radius: 8px;
+  color: #5d687c;
+}
+
+.ticker-node__close-button:hover {
+  background: #f5f7fb;
+  color: #172033;
+}
+
 .ticker-node__label {
   color: #5d687c;
   display: grid;
@@ -295,11 +314,6 @@ textarea {
   font-weight: 700;
   gap: 6px;
   text-transform: uppercase;
-}
-
-.ticker-node__actions {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .danger-button {
@@ -415,6 +429,59 @@ th {
   z-index: 2;
 }
 
+.performance-table__empty-hint {
+  color: #5d687c;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 12px 10px;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+}
+
+.performance-table__add-row td {
+  background: #f8f9fc;
+  border-top: 1px solid #e7eaf1;
+}
+
+.performance-table__add-wrap {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.performance-table__add-input {
+  border: 1px solid #dfe3ec;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  max-width: 6.5rem;
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.performance-table__add-button {
+  background: #2454ff;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 7px 12px;
+}
+
+.performance-table__add-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.performance-table__add-button:not(:disabled):hover {
+  filter: brightness(1.05);
+}
+
 .empty,
 .errors {
   border-radius: 12px;
@@ -514,6 +581,25 @@ th {
 
   .empty {
     background: #1d2637;
+  }
+
+  .ticker-node__close-button {
+    background: #151b2a;
+    border-color: #2b3548;
+    color: #aab4c5;
+  }
+
+  .ticker-node__close-button:hover {
+    background: #1d2637;
+    color: #eef2f8;
+  }
+
+  .performance-table__add-row td {
+    background: #121824;
+  }
+
+  .performance-table__empty-hint {
+    color: #aab4c5;
   }
 }
 

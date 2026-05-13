@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { NodeResizer, type NodeProps } from '@xyflow/react';
 import type { PerformanceRow } from '../api/watchlists';
-import { formatTickers, parseTickers } from '../storage/savedLists';
+import { parseTickers } from '../storage/savedLists';
 import { PerformanceTable } from './PerformanceTable';
 
 export type TickerListStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -26,16 +26,10 @@ export type TickerListNodeData = {
 function TickerListNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as TickerListNodeData;
   const [name, setName] = useState(nodeData.name);
-  const [tickers, setTickers] = useState(formatTickers(nodeData.tickers));
 
-  // Keep local editing state in sync when the underlying list mutates
-  // somewhere else (e.g. renamed in the sidebar, or another tab).
   useEffect(() => {
     setName(nodeData.name);
   }, [nodeData.name]);
-  useEffect(() => {
-    setTickers(formatTickers(nodeData.tickers));
-  }, [nodeData.tickers]);
 
   function commitName() {
     const cleaned = name.trim();
@@ -49,15 +43,23 @@ function TickerListNodeComponent({ id, data, selected }: NodeProps) {
     nodeData.onRename?.(nodeData.listId, cleaned);
   }
 
-  function commitTickers() {
-    const parsed = parseTickers(tickers);
-    if (
-      parsed.length === nodeData.tickers.length &&
-      parsed.every((value, index) => value === nodeData.tickers[index])
-    ) {
+  function handleAddTicker(raw: string) {
+    const parsed = parseTickers(raw);
+    if (parsed.length === 0) {
       return;
     }
-    nodeData.onSetTickers?.(nodeData.listId, parsed);
+    const merged = [...nodeData.tickers];
+    let changed = false;
+    for (const ticker of parsed) {
+      if (!merged.includes(ticker)) {
+        merged.push(ticker);
+        changed = true;
+      }
+    }
+    if (!changed) {
+      return;
+    }
+    nodeData.onSetTickers?.(nodeData.listId, merged);
   }
 
   return (
@@ -72,51 +74,44 @@ function TickerListNodeComponent({ id, data, selected }: NodeProps) {
             onChange={(event) => setName(event.target.value)}
             onBlur={commitName}
           />
-          <button
-            className="danger-button icon-button nodrag"
-            type="button"
-            aria-label={`Remove ${nodeData.name || 'this list'} from canvas`}
-            title="Remove from canvas (list stays in your library)"
-            onClick={() => nodeData.onRemoveFromCanvas?.(id)}
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
-              <path
-                d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
+          <p>{nodeData.tickers.length} tickers</p>
+          <div className="ticker-node__header-actions nodrag">
+            <button
+              className="ghost-button icon-button"
+              type="button"
+              disabled={nodeData.status === 'loading' || nodeData.missing}
+              aria-label="Refresh performance data"
+              title="Refresh performance"
+              onClick={() => nodeData.onRefresh?.(id)}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+                <path
+                  d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+            <button
+              className="ticker-node__close-button icon-button"
+              type="button"
+              aria-label={`Close ${nodeData.name || 'this list'} on canvas`}
+              title="Remove from canvas (list stays in your library)"
+              onClick={() => nodeData.onRemoveFromCanvas?.(id)}
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+                <path
+                  d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
-        <p>{nodeData.tickers.length} tickers</p>
       </header>
 
       {nodeData.missing ? (
         <div className="errors">This list is no longer in your library.</div>
       ) : null}
-
-      <label className="ticker-node__label">
-        Tickers
-        <textarea
-          className="nodrag"
-          value={tickers}
-          rows={2}
-          onChange={(event) => setTickers(event.target.value)}
-          onBlur={commitTickers}
-          aria-label="Ticker symbols"
-          disabled={nodeData.missing}
-        />
-      </label>
-
-      <div className="ticker-node__actions">
-        <button
-          className="nodrag"
-          type="button"
-          disabled={nodeData.status === 'loading' || nodeData.missing}
-          onClick={() => nodeData.onRefresh?.(id)}
-        >
-          {nodeData.status === 'loading' ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
 
       {nodeData.errors.length > 0 ? (
         <div className="errors">
@@ -126,7 +121,10 @@ function TickerListNodeComponent({ id, data, selected }: NodeProps) {
         </div>
       ) : null}
 
-      <PerformanceTable rows={nodeData.rows} />
+      <PerformanceTable
+        rows={nodeData.rows}
+        onAddTicker={nodeData.missing ? undefined : handleAddTicker}
+      />
     </article>
   );
 }

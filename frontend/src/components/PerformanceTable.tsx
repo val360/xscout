@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import type { PerformanceRow } from '../api/watchlists';
+import { parseTickers } from '../storage/savedLists';
 
 type PerformanceTableProps = {
   rows: PerformanceRow[];
+  /** When set, the table is always shown and a footer row lets users add tickers. */
+  onAddTicker?: (raw: string) => void;
 };
 
 const performanceColumns = [
@@ -15,10 +19,32 @@ const performanceColumns = [
   ['5Y', 'change5y', 'change5yClass'],
 ] as const;
 
-export function PerformanceTable({ rows }: PerformanceTableProps) {
-  if (rows.length === 0) {
+const COLUMN_COUNT = 3 + performanceColumns.length;
+
+export function PerformanceTable({ rows, onAddTicker }: PerformanceTableProps) {
+  const [draft, setDraft] = useState('');
+
+  if (rows.length === 0 && !onAddTicker) {
     return <div className="empty">No stock data to display yet.</div>;
   }
+
+  function submitAdd() {
+    const trimmed = draft.trim();
+    if (!trimmed || !onAddTicker) {
+      return;
+    }
+    onAddTicker(trimmed);
+    setDraft('');
+  }
+
+  const emptyBody =
+    rows.length === 0 ? (
+      <tr>
+        <td colSpan={COLUMN_COUNT} className="performance-table__empty-hint">
+          No performance loaded yet. Add tickers here, then use refresh in the header.
+        </td>
+      </tr>
+    ) : null;
 
   return (
     <div className="table-wrap nodrag nowheel">
@@ -34,6 +60,7 @@ export function PerformanceTable({ rows }: PerformanceTableProps) {
           </tr>
         </thead>
         <tbody>
+          {emptyBody}
           {rows.map((row) => (
             <tr key={row.ticker}>
               <td>
@@ -49,6 +76,45 @@ export function PerformanceTable({ rows }: PerformanceTableProps) {
             </tr>
           ))}
         </tbody>
+        {onAddTicker ? (
+          <tfoot>
+            <tr className="performance-table__add-row">
+              <td>
+                <div className="performance-table__add-wrap nodrag">
+                  <input
+                    className="performance-table__add-input"
+                    type="text"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    aria-label="Ticker symbol to add"
+                    placeholder="AAPL"
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        submitAdd();
+                      }
+                    }}
+                  />
+                  <button
+                    className="performance-table__add-button nodrag"
+                    type="button"
+                    disabled={!parseTickers(draft).length}
+                    onClick={submitAdd}
+                  >
+                    Add
+                  </button>
+                </div>
+              </td>
+              {Array.from({ length: COLUMN_COUNT - 1 }, (_, index) => (
+                <td key={index}>—</td>
+              ))}
+            </tr>
+          </tfoot>
+        ) : null}
       </table>
     </div>
   );
