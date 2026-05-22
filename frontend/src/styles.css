@@ -97,7 +97,7 @@ textarea {
 }
 
 .canvas {
-  background-image: radial-gradient(circle at 1px 1px, #aeb8c8 1px, transparent 0);
+  background-image: radial-gradient(circle at 1px 1px, #c8ced8 1px, transparent 0);
   background-size: 24px 24px;
   min-height: 0;
   position: relative;
@@ -547,7 +547,7 @@ th {
   }
 
   .canvas {
-    background-image: radial-gradient(circle at 1px 1px, #4a5a72 1px, transparent 0);
+    background-image: radial-gradient(circle at 1px 1px, #3b465a 1px, transparent 0);
   }
 
   input,
