@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Background,
   Controls,
   MiniMap,
   ReactFlow,
@@ -382,7 +381,6 @@ function Workspace() {
             defaultViewport={viewport}
             onMoveEnd={(_, nextViewport) => setViewport(nextViewport)}
           >
-            <Background />
             <Controls />
             <MiniMap pannable zoomable />
           </ReactFlow>
