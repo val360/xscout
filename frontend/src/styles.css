@@ -97,10 +97,12 @@ textarea {
 }
 
 .canvas {
-  background-image: radial-gradient(circle at 1px 1px, #c8ced8 1px, transparent 0);
-  background-size: 24px 24px;
   min-height: 0;
   position: relative;
+}
+
+.react-flow {
+  --xy-background-pattern-color: #c8ced8;
 }
 
 .canvas__placeholder {
@@ -546,8 +548,8 @@ th {
     color: #88a4ff;
   }
 
-  .canvas {
-    background-image: radial-gradient(circle at 1px 1px, #3b465a 1px, transparent 0);
+  .react-flow {
+    --xy-background-pattern-color: #3b465a;
   }
 
   input,
