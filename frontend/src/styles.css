@@ -244,7 +244,7 @@ textarea {
 }
 
 .react-flow {
-  background: radial-gradient(circle at 1px 1px, #dfe3ec 1px, transparent 0);
+  background: radial-gradient(circle at 1px 1px, #cbd2df 1px, transparent 0);
   background-size: 24px 24px;
 }
 
@@ -549,7 +549,7 @@ th {
   }
 
   .react-flow {
-    background: radial-gradient(circle at 1px 1px, #2b3548 1px, transparent 0);
+    background: radial-gradient(circle at 1px 1px, #38445a 1px, transparent 0);
     background-size: 24px 24px;
   }
 
