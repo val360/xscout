@@ -1,4 +1,6 @@
 :root {
+  --canvas-grid-color: #dfe3ec;
+
   color-scheme: light dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f6f7fb;
@@ -97,8 +99,6 @@ textarea {
 }
 
 .canvas {
-  background-image: radial-gradient(circle at 1px 1px, #c8ced8 1px, transparent 0);
-  background-size: 24px 24px;
   min-height: 0;
   position: relative;
 }
@@ -244,7 +244,6 @@ textarea {
 .ghost-button:hover {
   background: rgb(36 84 255 / 8%);
 }
-
 
 .ticker-node {
   background: #ffffff;
@@ -508,6 +507,8 @@ th {
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --canvas-grid-color: #2b3548;
+
     background: #0f1420;
     color: #eef2f8;
   }
@@ -544,10 +545,6 @@ th {
 
   .ghost-button {
     color: #88a4ff;
-  }
-
-  .canvas {
-    background-image: radial-gradient(circle at 1px 1px, #3b465a 1px, transparent 0);
   }
 
   input,

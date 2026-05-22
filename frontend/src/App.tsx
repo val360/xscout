@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   ReactFlow,
@@ -381,6 +383,11 @@ function Workspace() {
             defaultViewport={viewport}
             onMoveEnd={(_, nextViewport) => setViewport(nextViewport)}
           >
+            <Background
+              color="var(--canvas-grid-color)"
+              gap={24}
+              variant={BackgroundVariant.Dots}
+            />
             <Controls />
             <MiniMap pannable zoomable />
           </ReactFlow>
