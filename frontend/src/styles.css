@@ -243,8 +243,8 @@ textarea {
   background: rgb(36 84 255 / 8%);
 }
 
-.react-flow {
-  background: radial-gradient(circle at 1px 1px, #cbd2df 1px, transparent 0);
+.react-flow__pane {
+  background: radial-gradient(circle at 1px 1px, #b8c1cf 1px, transparent 0);
   background-size: 24px 24px;
 }
 
@@ -548,8 +548,8 @@ th {
     color: #88a4ff;
   }
 
-  .react-flow {
-    background: radial-gradient(circle at 1px 1px, #38445a 1px, transparent 0);
+  .react-flow__pane {
+    background: radial-gradient(circle at 1px 1px, #4a5a72 1px, transparent 0);
     background-size: 24px 24px;
   }
 
