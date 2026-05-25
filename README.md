@@ -46,6 +46,14 @@ then the local copy is reduced to layout-only.
 
 ## Run
 
+```bash
+# Optional: lists + persistence
+docker compose up -d postgres
+export DATABASE_URL=postgresql://xscout:xscout@localhost:5432/xscout
+
+.venv/bin/python -m xscout
+```
+
 Start the Flask API locally (with `DATABASE_URL` exported):
 
 ```bash

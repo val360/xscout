@@ -445,7 +445,7 @@ th {
 .performance-table__add-wrap {
   align-items: center;
   display: flex;
-  flex-wrap: wrap;
+  /* flex-wrap: nowrap; */
   gap: 8px;
 }
 
@@ -456,7 +456,7 @@ th {
   font-weight: 700;
   letter-spacing: 0.04em;
   max-width: 6.5rem;
-  min-width: 0;
+  min-width: 4rem;
   padding: 6px 8px;
 }
 

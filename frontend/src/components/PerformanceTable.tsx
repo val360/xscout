@@ -109,9 +109,9 @@ export function PerformanceTable({ rows, onAddTicker }: PerformanceTableProps) {
                   </button>
                 </div>
               </td>
-              {Array.from({ length: COLUMN_COUNT - 1 }, (_, index) => (
+              {/* {Array.from({ length: COLUMN_COUNT - 1 }, (_, index) => (
                 <td key={index}>—</td>
-              ))}
+              ))} */}
             </tr>
           </tfoot>
         ) : null}
