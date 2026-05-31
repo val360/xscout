@@ -20,7 +20,7 @@ export type TickerListNodeData = {
   onRemoveFromCanvas?: (nodeId: string) => void;
   onRefresh?: (nodeId: string) => void;
   onRename?: (listId: string, name: string) => void;
-  onSetTickers?: (listId: string, tickers: string[]) => void;
+  onSetTickers?: (nodeId: string, listId: string, tickers: string[]) => void;
 } & Record<string, unknown>;
 
 function TickerListNodeComponent({ id, data, selected }: NodeProps) {
@@ -59,7 +59,7 @@ function TickerListNodeComponent({ id, data, selected }: NodeProps) {
     if (!changed) {
       return;
     }
-    nodeData.onSetTickers?.(nodeData.listId, merged);
+    nodeData.onSetTickers?.(id, nodeData.listId, merged);
   }
 
   return (

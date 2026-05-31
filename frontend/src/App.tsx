@@ -181,9 +181,10 @@ function Workspace() {
   );
 
   const refreshNode = useCallback(
-    async (nodeId: string) => {
+    async (nodeId: string, tickersOverride?: string[]) => {
       const target = nodesRef.current.find((node) => node.id === nodeId);
-      const tickers = target ? listsById[target.data.listId]?.tickers ?? [] : [];
+      const tickers =
+        tickersOverride ?? (target ? listsById[target.data.listId]?.tickers ?? [] : []);
 
       setNodes((current) =>
         current.map((node) =>
@@ -253,26 +254,28 @@ function Workspace() {
   );
 
   const addListToCanvas = useCallback(
-    (listId: string) => {
+    (listId: string, tickers: string[]) => {
+      if (nodesRef.current.some((node) => node.data.listId === listId)) {
+        return;
+      }
+      // Tile new nodes in a 3-wide grid so consecutive lists do not overlap.
+      const index = nodesRef.current.length;
+      const columnsPerRow = 3;
+      const newNode = createCanvasNode(listId, {
+        x: 80 + (index % columnsPerRow) * 600,
+        y: 80 + Math.floor(index / columnsPerRow) * 380,
+      });
+
       setNodes((current) => {
         if (current.some((node) => node.data.listId === listId)) {
           return current;
         }
-        // Tile new nodes in a 3-wide grid so consecutive lists don't pile
-        // up on top of each other. Nodes are 560px wide; 600px stride
-        // leaves a small gutter, and 380px row stride matches min height.
-        const index = current.length;
-        const columnsPerRow = 3;
-        return [
-          ...current,
-          createCanvasNode(listId, {
-            x: 80 + (index % columnsPerRow) * 600,
-            y: 80 + Math.floor(index / columnsPerRow) * 380,
-          }),
-        ];
+        return [...current, newNode];
       });
+
+      void refreshNode(newNode.id, tickers);
     },
-    [setNodes],
+    [refreshNode, setNodes],
   );
 
   const refreshAll = useCallback(() => {
@@ -289,10 +292,34 @@ function Workspace() {
   );
 
   const handleSetTickers = useCallback(
-    (listId: string, tickers: string[]) => {
-      void setTickers(listId, tickers);
+    (nodeId: string, listId: string, tickers: string[]) => {
+      void (async () => {
+        try {
+          const updated = await setTickers(listId, tickers);
+          if (updated) {
+            await refreshNode(nodeId, updated.tickers);
+          }
+        } catch (error) {
+          setNodes((current) =>
+            current.map((node) =>
+              node.id === nodeId
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      errors: [
+                        error instanceof Error ? error.message : 'Unable to update tickers.',
+                      ],
+                      status: 'error',
+                    },
+                  }
+                : node,
+            ),
+          );
+        }
+      })();
     },
-    [setTickers],
+    [refreshNode, setNodes, setTickers],
   );
 
   const onConnect = useCallback(
