@@ -4,8 +4,8 @@ import { parseTickers } from '../storage/savedLists';
 
 type ListsDrawerProps = {
   pinnedListIds: Set<string>;
-  onAddToCanvas: (listId: string) => void;
-  onCreateAndAdd: (listId: string) => void;
+  onAddToCanvas: (listId: string, tickers: string[]) => void;
+  onCreateAndAdd: (listId: string, tickers: string[]) => void;
 };
 
 export function ListsDrawer({ pinnedListIds, onAddToCanvas, onCreateAndAdd }: ListsDrawerProps) {
@@ -31,7 +31,7 @@ export function ListsDrawer({ pinnedListIds, onAddToCanvas, onCreateAndAdd }: Li
         name: trimmed,
         tickers: parseTickers(newTickers),
       });
-      onCreateAndAdd(created.id);
+      onCreateAndAdd(created.id, created.tickers);
       setNewName('');
       setNewTickers('AAPL, MSFT, NVDA');
       setCreating(false);
@@ -101,7 +101,7 @@ export function ListsDrawer({ pinnedListIds, onAddToCanvas, onCreateAndAdd }: Li
               <div className="lists-drawer__item-actions">
                 <button
                   type="button"
-                  onClick={() => onAddToCanvas(list.id)}
+                  onClick={() => onAddToCanvas(list.id, list.tickers)}
                   disabled={pinned}
                   title={pinned ? 'Already on canvas' : 'Add to canvas'}
                 >

@@ -41,7 +41,7 @@ export function PerformanceTable({ rows, onAddTicker }: PerformanceTableProps) {
     rows.length === 0 ? (
       <tr>
         <td colSpan={COLUMN_COUNT} className="performance-table__empty-hint">
-          No performance loaded yet. Add tickers here, then use refresh in the header.
+          No performance loaded yet. Add tickers here to load performance.
         </td>
       </tr>
     ) : null;
