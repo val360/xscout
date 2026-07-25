@@ -713,7 +713,7 @@ kbd {
 .react-flow {
   --xy-background-color: var(--canvas-bg);
   --xy-background-pattern-dots-color: var(--grid-dot);
-  --xy-minimap-background-color: var(--surface);
+  --xy-minimap-background-color: var(--surface-muted);
   --xy-minimap-mask-background-color: var(--minimap-mask);
   --xy-minimap-node-background-color: var(--minimap-node);
   --xy-selection-background-color: var(--accent-soft);
@@ -774,23 +774,34 @@ kbd {
 
 /* ------------------------------------------------------- resize affordances */
 
-/* React Flow ships 1px-wide edge controls, which are near impossible to grab.
-   These rules widen the hit area to ~14px while keeping the visible line thin. */
-/* `visibility` rather than `opacity` alone: hidden controls are then skipped
-   during paint, which keeps dragging a card as cheap as it was before the
-   handles became permanent. */
-.react-flow__resize-control {
-  opacity: 0;
-  transition: opacity 0.12s ease, visibility 0.12s ease;
-  visibility: hidden;
+/* React Flow ships 1px edge controls and 4px corner handles, which are close to
+   impossible to grab. The rules below widen every hit area while keeping the
+   visible marker thin, and bias the widened area *outwards* so it overhangs the
+   empty canvas instead of covering the card's own header, footer and
+   scrollbars — the card's 9-11px padding is more than the inward reach. */
+.react-flow {
+  --grab-band: 16px;
+  --grab-band-in: 5px;
+  --grab-band-out: calc(var(--grab-band) - var(--grab-band-in));
+  --grab-knob: 24px;
+  --grab-knob-in: 6px;
+  --grab-knob-out: calc(var(--grab-knob) - var(--grab-knob-in));
 }
 
-.react-flow__node:hover .react-flow__resize-control,
-.react-flow__node.selected .react-flow__resize-control,
-.react-flow__resize-control:hover,
-.react-flow__resize-control:active {
+/* Only the marker fades; the hit area itself stays live at all times so the
+   pointer never has to find an invisible target in two steps. */
+.react-flow__resize-control::after {
+  content: '';
+  opacity: 0;
+  position: absolute;
+  transition: opacity 0.12s ease, height 0.1s ease, width 0.1s ease;
+}
+
+.react-flow__node:hover .react-flow__resize-control::after,
+.react-flow__node.selected .react-flow__resize-control::after,
+.react-flow__resize-control:hover::after,
+.react-flow__resize-control:active::after {
   opacity: 1;
-  visibility: visible;
 }
 
 .react-flow__resize-control.line {
@@ -801,27 +812,43 @@ kbd {
 
 .react-flow__resize-control.line::after {
   background: var(--accent);
-  content: '';
-  position: absolute;
 }
 
 .react-flow__resize-control.line.left,
 .react-flow__resize-control.line.right {
-  width: 14px;
+  width: var(--grab-band);
+}
+
+.react-flow__resize-control.line.top,
+.react-flow__resize-control.line.bottom {
+  height: var(--grab-band);
+}
+
+/* React Flow anchors the near sides at 0 and the far sides at 100%, then
+   centres them with a -50% translate. Replacing that translate with an explicit
+   offset is what shifts the band off-centre, towards the canvas. */
+.react-flow__resize-control.line.top {
+  transform: translateY(calc(-1 * var(--grab-band-out)));
+}
+
+.react-flow__resize-control.line.bottom {
+  transform: translateY(calc(-1 * var(--grab-band-in)));
+}
+
+.react-flow__resize-control.line.left {
+  transform: translateX(calc(-1 * var(--grab-band-out)));
+}
+
+.react-flow__resize-control.line.right {
+  transform: translateX(calc(-1 * var(--grab-band-in)));
 }
 
 .react-flow__resize-control.line.left::after,
 .react-flow__resize-control.line.right::after {
   bottom: 0;
-  left: 50%;
   top: 0;
-  transform: translateX(-50%);
+  translate: -50% 0;
   width: 2px;
-}
-
-.react-flow__resize-control.line.top,
-.react-flow__resize-control.line.bottom {
-  height: 14px;
 }
 
 .react-flow__resize-control.line.top::after,
@@ -829,49 +856,84 @@ kbd {
   height: 2px;
   left: 0;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  translate: 0 -50%;
+}
+
+.react-flow__resize-control.line.top::after {
+  top: var(--grab-band-out);
+}
+
+.react-flow__resize-control.line.bottom::after {
+  top: var(--grab-band-in);
+}
+
+.react-flow__resize-control.line.left::after {
+  left: var(--grab-band-out);
+}
+
+.react-flow__resize-control.line.right::after {
+  left: var(--grab-band-in);
 }
 
 .react-flow__resize-control.handle {
   background: transparent;
   border: 0;
-  height: 18px;
-  width: 18px;
+  height: var(--grab-knob);
+  translate: calc(-1 * var(--grab-knob-x)) calc(-1 * var(--grab-knob-y));
+  width: var(--grab-knob);
   z-index: 2;
 }
 
+.react-flow__resize-control.handle.top {
+  --grab-knob-y: var(--grab-knob-out);
+}
+
+.react-flow__resize-control.handle.bottom {
+  --grab-knob-y: var(--grab-knob-in);
+}
+
+.react-flow__resize-control.handle.left {
+  --grab-knob-x: var(--grab-knob-out);
+}
+
+.react-flow__resize-control.handle.right {
+  --grab-knob-x: var(--grab-knob-in);
+}
+
+/* The knob is drawn straddling the corner, which puts the marker in the middle
+   of its own hit area rather than off to one side of it. */
 .react-flow__resize-control.handle::after {
-  background: var(--accent);
+  background: var(--surface);
+  border: 2px solid var(--accent);
   border-radius: 3px;
-  box-shadow: 0 0 0 2px var(--surface);
-  content: '';
-  inset: 6px;
-  position: absolute;
+  box-shadow: var(--shadow-sm);
+  height: 11px;
+  left: var(--grab-knob-x);
+  top: var(--grab-knob-y);
+  translate: -50% -50%;
+  width: 11px;
 }
 
-/* The bottom-right grip stays visible so the card always advertises that it
-   can be resized. */
-.react-flow__resize-control.handle.bottom.right {
-  height: 22px;
-  opacity: 1;
-  visibility: visible;
-  width: 22px;
-}
-
+/* The bottom-right knob never fades out, so a card always advertises that it
+   can be resized without having to be hovered first. */
 .react-flow__resize-control.handle.bottom.right::after {
-  background: transparent;
-  border-bottom: 2px solid var(--border-strong);
-  border-bottom-right-radius: 4px;
-  border-right: 2px solid var(--border-strong);
-  box-shadow: none;
-  inset: 5px 6px 6px 5px;
-  transition: border-color 0.12s ease;
+  border-color: var(--text-subtle);
+  opacity: 1;
+  transition: border-color 0.12s ease, height 0.1s ease, width 0.1s ease;
 }
 
 .react-flow__node:hover .react-flow__resize-control.handle.bottom.right::after,
+.react-flow__node.selected .react-flow__resize-control.handle.bottom.right::after,
 .react-flow__resize-control.handle.bottom.right:hover::after {
   border-color: var(--accent);
+}
+
+/* Growing the knob under the pointer makes the last few pixels of the approach
+   forgiving: once it is lit up, it is already easy to hit. */
+.react-flow__resize-control.handle:hover::after,
+.react-flow__resize-control.handle:active::after {
+  height: 14px;
+  width: 14px;
 }
 
 /* -------------------------------------------------------------------- node */
@@ -911,18 +973,16 @@ kbd {
   transition: none;
 }
 
-/* While a card is being dragged nothing else on the canvas is interactive, so
-   skip hover work the pointer would otherwise trigger as it sweeps past. */
+/* Nothing but the dragged card is interactive mid-drag, and taking the others
+   out of hit-testing stops the pointer sweeping across them from re-evaluating
+   every `:hover` rule on the way past. Measured with scripts/perfcheck.mjs:
+   ~30ms of style recalc per drag without this, ~23ms with it. */
 .canvas.is-dragging .react-flow__node:not(.dragging) {
   pointer-events: none;
 }
 
 .canvas.is-dragging .ticker-node {
   transition: none;
-}
-
-.canvas.is-dragging .performance-table tbody tr:hover td {
-  background: var(--surface);
 }
 
 .ticker-node__progress {

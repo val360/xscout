@@ -21,9 +21,11 @@ import {
   ESTIMATED_NODE_HEIGHT,
   LIST_DRAG_MIME,
   MAX_ZOOM,
+  MIN_NODE_HEIGHT,
   MIN_ZOOM,
   NODE_GAP,
   VIEWPORT_TWEEN_MS,
+  nodeHeightForTickers,
 } from './canvas/constants';
 import { CanvasControls } from './components/CanvasControls';
 import { ListsDrawer } from './components/ListsDrawer';
@@ -57,12 +59,12 @@ function createNodeId(): string {
   return `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function createCanvasNode(listId: string, position: XYPosition): CanvasNode {
+function createCanvasNode(listId: string, position: XYPosition, tickerCount: number): CanvasNode {
   return {
     id: createNodeId(),
     type: 'tickerList',
     position,
-    style: { width: DEFAULT_NODE_WIDTH },
+    style: { width: DEFAULT_NODE_WIDTH, height: nodeHeightForTickers(tickerCount) },
     // Display state is hydrated each render from the lists context.
     data: {
       listId,
@@ -291,8 +293,8 @@ function Workspace() {
       if (!node) {
         return;
       }
-      const width = node.measured?.width ?? DEFAULT_NODE_WIDTH;
-      const height = node.measured?.height ?? ESTIMATED_NODE_HEIGHT;
+      const width = node.measured?.width ?? (Number(node.style?.width) || DEFAULT_NODE_WIDTH);
+      const height = node.measured?.height ?? (Number(node.style?.height) || ESTIMATED_NODE_HEIGHT);
       setNodes((current) =>
         current.map((entry) =>
           entry.selected === (entry.id === nodeId)
@@ -309,9 +311,10 @@ function Workspace() {
   );
 
   /**
-   * Walks a grid outwards from the top-left of the visible area and returns the
-   * first slot that does not collide with an existing card, so adding several
-   * lists in a row lays them out side by side instead of stacking them.
+   * Places a new card in whichever of two columns is currently shorter, directly
+   * below whatever already occupies that column. Two columns keep a growing
+   * canvas roughly square, so "fit view" lands on a zoom level where the tables
+   * are still readable.
    */
   const nextFreePosition = useCallback((): XYPosition => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -320,34 +323,34 @@ function Workspace() {
       y: (rect?.top ?? 0) + 48,
     });
 
-    const occupied = getNodes().map((node) => ({
-      x: node.position.x,
-      y: node.position.y,
-      width: node.measured?.width ?? (Number(node.style?.width) || DEFAULT_NODE_WIDTH),
-      height: node.measured?.height ?? ESTIMATED_NODE_HEIGHT,
-    }));
+    const placed = getNodes().map((node) => {
+      const width = Math.max(
+        node.measured?.width ?? 0,
+        Number(node.style?.width) || 0,
+        DEFAULT_NODE_WIDTH,
+      );
+      const height = Math.max(
+        node.measured?.height ?? 0,
+        Number(node.style?.height) || 0,
+        MIN_NODE_HEIGHT,
+      );
+      return {
+        left: node.position.x,
+        right: node.position.x + width,
+        bottom: node.position.y + height,
+      };
+    });
 
-    const stepX = DEFAULT_NODE_WIDTH + NODE_GAP;
-    const stepY = ESTIMATED_NODE_HEIGHT + NODE_GAP;
+    const columns = [0, 1].map((column) => {
+      const left = origin.x + column * (DEFAULT_NODE_WIDTH + NODE_GAP);
+      const right = left + DEFAULT_NODE_WIDTH;
+      const bottom = placed
+        .filter((node) => node.left < right && node.right > left)
+        .reduce((lowest, node) => Math.max(lowest, node.bottom + NODE_GAP), origin.y);
+      return { x: left, y: bottom };
+    });
 
-    // Two columns keeps a growing canvas roughly square, so "fit view" lands on
-    // a zoom level where the tables are still readable.
-    for (let row = 0; row < 40; row += 1) {
-      for (let column = 0; column < 2; column += 1) {
-        const candidate = { x: origin.x + column * stepX, y: origin.y + row * stepY };
-        const collides = occupied.some(
-          (node) =>
-            candidate.x < node.x + node.width + NODE_GAP &&
-            candidate.x + DEFAULT_NODE_WIDTH + NODE_GAP > node.x &&
-            candidate.y < node.y + node.height + NODE_GAP &&
-            candidate.y + ESTIMATED_NODE_HEIGHT + NODE_GAP > node.y,
-        );
-        if (!collides) {
-          return candidate;
-        }
-      }
-    }
-    return origin;
+    return columns[0].y <= columns[1].y ? columns[0] : columns[1];
   }, [getNodes, screenToFlowPosition]);
 
   const addListToCanvas = useCallback(
@@ -357,7 +360,7 @@ function Workspace() {
         focusNode(existing.id);
         return;
       }
-      const newNode = createCanvasNode(listId, position ?? nextFreePosition());
+      const newNode = createCanvasNode(listId, position ?? nextFreePosition(), tickers.length);
       setNodes((current) =>
         current.some((node) => node.data.listId === listId) ? current : [...current, newNode],
       );

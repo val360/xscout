@@ -50,88 +50,180 @@ check(
   `scrollWidth=${fit.scrollWidth} clientWidth=${fit.clientWidth}`,
 );
 
+// -------------------------------------- card controls survive the grab bands
+// The grab bands are live even when invisible, so the thing they must never do
+// is swallow a click meant for the card itself.
+const reachable = await page.evaluate(() => {
+  const out = {};
+  for (const [label, selector] of [
+    ['title input', '.ticker-node__title'],
+    ['refresh button', '.ticker-node__actions .icon-button'],
+    ['add-ticker input', '.performance-table__add-input'],
+    ['add-ticker button', '.performance-table__add-button'],
+    ['first data row', '.performance-table tbody tr td'],
+    ['column header', '.performance-table thead th'],
+  ]) {
+    const target = document.querySelector(selector);
+    const rect = target.getBoundingClientRect();
+    const topmost = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    out[label] = {
+      ok: target === topmost || target.contains(topmost) || topmost?.closest(selector) !== null,
+      blockedBy: topmost?.className ?? null,
+    };
+  }
+  return out;
+});
+for (const [label, value] of Object.entries(reachable)) {
+  check(`${label} is not covered by a grab band`, value.ok, `topmost=${value.blockedBy}`);
+}
+
+await page.locator('.ticker-node__title').first().click();
+check(
+  'clicking the title focuses it rather than starting a resize',
+  await page.evaluate(() => document.activeElement?.className.includes('ticker-node__title')),
+);
+
 // ------------------------------------------------------------- resize probes
-const node = page.locator('.react-flow__node').first();
-await node.hover();
+// Park the pointer on empty canvas: the geometry below has to hold for a card
+// nobody is hovering, which is the state a user first meets it in.
+await page.mouse.move(1500, 900);
+await page.waitForTimeout(250);
 
 const handleGeometry = await page.evaluate(() => {
+  const flowNode = document.querySelector('.react-flow__node');
+  const nodeRect = flowNode.getBoundingClientRect();
   const out = {};
-  for (const selector of [
-    '.react-flow__resize-control.handle.bottom.right',
-    '.react-flow__resize-control.line.right',
-    '.react-flow__resize-control.line.bottom',
-  ]) {
-    const element = document.querySelector(selector);
-    if (!element) {
-      out[selector] = null;
-      continue;
-    }
+  for (const element of flowNode.querySelectorAll('.react-flow__resize-control')) {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
-    out[selector] = {
+    const marker = getComputedStyle(element, '::after');
+    out[element.className.replace('react-flow__resize-control ', '')] = {
       width: Math.round(rect.width),
       height: Math.round(rect.height),
-      opacity: style.opacity,
+      // How far the hit area reaches into the card, per axis. Staying under the
+      // card's 9px padding is what keeps it clear of the card's own controls.
+      insetX: Math.round(Math.min(rect.right - nodeRect.left, nodeRect.right - rect.left)),
+      insetY: Math.round(Math.min(rect.bottom - nodeRect.top, nodeRect.bottom - rect.top)),
+      visibility: style.visibility,
       pointerEvents: style.pointerEvents,
-      display: style.display,
+      markerOpacity: marker.opacity,
     };
   }
   return out;
 });
 console.log('handle geometry:', JSON.stringify(handleGeometry, null, 2));
 
-const grip = handleGeometry['.react-flow__resize-control.handle.bottom.right'];
-check('bottom-right grip exists and is visible', grip !== null && grip.opacity === '1', JSON.stringify(grip));
-const rightLine = handleGeometry['.react-flow__resize-control.line.right'];
-check('right edge hit area is at least 12px wide', rightLine !== null && rightLine.width >= 12, JSON.stringify(rightLine));
+const controls = Object.entries(handleGeometry);
+check('all eight resize controls are hit-testable', controls.length === 8 &&
+  controls.every(([, value]) => value.visibility === 'visible' && value.pointerEvents === 'all'),
+  controls.map(([key]) => key).join(' | '));
 
-async function boxOf(selector) {
-  return page.locator(selector).first().boundingBox();
-}
+const lines = controls.filter(([key]) => key.includes('line'));
+check(
+  'every edge band is at least 14px thick',
+  lines.every(([key, value]) => (key.includes('top') || key.includes('bottom') ? value.height : value.width) >= 14),
+  lines.map(([key, value]) => `${key}=${value.width}x${value.height}`).join(', '),
+);
 
-async function nodeSize() {
+const knobs = controls.filter(([key]) => key.includes('handle'));
+check(
+  'every corner knob is at least 20px and overhangs outwards',
+  knobs.every(([, value]) => value.width >= 20 && value.height >= 20 && value.insetX <= 9 && value.insetY <= 9),
+  knobs.map(([key, value]) => `${key}=${value.width}px in(${value.insetX},${value.insetY})`).join(', '),
+);
+
+const grip = handleGeometry['nodrag bottom right handle'];
+check('bottom-right grip is visible without hovering', grip !== undefined && grip.markerOpacity === '1', JSON.stringify(grip));
+
+async function nodeRect() {
   return page.evaluate(() => {
     const rect = document.querySelector('.react-flow__node').getBoundingClientRect();
-    return { width: Math.round(rect.width), height: Math.round(rect.height) };
+    return {
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+    };
   });
 }
 
-// Drag the corner grip.
-const before = await nodeSize();
-let handleBox = await boxOf('.react-flow__resize-control.handle.bottom.right');
-await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
-await page.mouse.down();
-for (let step = 1; step <= 12; step += 1) {
-  await page.mouse.move(
-    handleBox.x + handleBox.width / 2 + (150 * step) / 12,
-    handleBox.y + handleBox.height / 2 + (120 * step) / 12,
+/**
+ * Grabs a control at the point of the card border it is meant to control, not at
+ * the centre of its (deliberately off-centre) hit box, then drags by `by`.
+ */
+async function dragControl(selector, grabAt, by) {
+  const rect = await nodeRect();
+  const start = {
+    x: rect.x + rect.width * grabAt.x,
+    y: rect.y + rect.height * grabAt.y,
+  };
+  const hit = await page.evaluate(
+    ({ point, expected }) => {
+      const element = document.elementFromPoint(point.x, point.y);
+      return { actual: element?.className ?? null, matches: element?.matches(expected) ?? false };
+    },
+    { point: start, expected: selector },
   );
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  for (let step = 1; step <= 12; step += 1) {
+    await page.mouse.move(start.x + (by.x * step) / 12, start.y + (by.y * step) / 12);
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(120);
+  return { hit, after: await nodeRect() };
 }
-await page.mouse.up();
-const afterCorner = await nodeSize();
-check(
-  'corner grip resizes the card',
-  afterCorner.width > before.width + 100 && afterCorner.height > before.height + 90,
-  `${before.width}x${before.height} -> ${afterCorner.width}x${afterCorner.height}`,
-);
 
-// Drag the right edge.
-const edgeBox = await boxOf('.react-flow__resize-control.line.right');
-await page.mouse.move(edgeBox.x + edgeBox.width / 2, edgeBox.y + edgeBox.height / 2);
-await page.mouse.down();
-for (let step = 1; step <= 10; step += 1) {
-  await page.mouse.move(
-    edgeBox.x + edgeBox.width / 2 - (100 * step) / 10,
-    edgeBox.y + edgeBox.height / 2,
+const resizeCases = [
+  {
+    label: 'bottom-right corner grows the card',
+    selector: '.react-flow__resize-control.handle.bottom.right',
+    grabAt: { x: 1, y: 1 },
+    by: { x: 140, y: 110 },
+    expect: (before, after) => after.width >= before.width + 130 && after.height >= before.height + 100,
+  },
+  {
+    label: 'right edge narrows the card',
+    selector: '.react-flow__resize-control.line.right',
+    grabAt: { x: 1, y: 0.5 },
+    by: { x: -120, y: 0 },
+    expect: (before, after) => Math.abs(after.width - (before.width - 120)) <= 4,
+  },
+  {
+    label: 'bottom edge shortens the card',
+    selector: '.react-flow__resize-control.line.bottom',
+    grabAt: { x: 0.5, y: 1 },
+    by: { x: 0, y: -70 },
+    expect: (before, after) => Math.abs(after.height - (before.height - 70)) <= 4,
+  },
+  {
+    label: 'left edge resizes and keeps the right border still',
+    selector: '.react-flow__resize-control.line.left',
+    grabAt: { x: 0, y: 0.5 },
+    by: { x: 90, y: 0 },
+    expect: (before, after) =>
+      Math.abs(after.width - (before.width - 90)) <= 4 &&
+      Math.abs(after.x + after.width - (before.x + before.width)) <= 4,
+  },
+  {
+    label: 'top-left corner resizes diagonally',
+    selector: '.react-flow__resize-control.handle.top.left',
+    grabAt: { x: 0, y: 0 },
+    by: { x: 60, y: 40 },
+    expect: (before, after) =>
+      Math.abs(after.width - (before.width - 60)) <= 4 && Math.abs(after.height - (before.height - 40)) <= 4,
+  },
+];
+
+for (const testCase of resizeCases) {
+  const before = await nodeRect();
+  const { hit, after } = await dragControl(testCase.selector, testCase.grabAt, testCase.by);
+  check(
+    testCase.label,
+    hit.matches && testCase.expect(before, after),
+    `hit=${hit.matches ? 'yes' : `no (${hit.actual})`} ${before.width}x${before.height} -> ${after.width}x${after.height}`,
   );
 }
-await page.mouse.up();
-const afterEdge = await nodeSize();
-check(
-  'right edge resizes the card',
-  afterEdge.width < afterCorner.width - 80,
-  `${afterCorner.width} -> ${afterEdge.width}`,
-);
 
 // -------------------------------------------------------------- drag to drop
 const drawerItem = page.locator('.drawer__item', { hasText: 'Energy' });
@@ -219,6 +311,72 @@ await page.keyboard.press('f');
 await page.waitForTimeout(600);
 const zoomPostFit = await page.locator('.canvas-controls__zoom').innerText();
 check('pressing F fits the view', zoomPreFit !== zoomPostFit, `${zoomPreFit} -> ${zoomPostFit}`);
+
+// ------------------------------------------------------------ card placement
+// Fresh context: this is about where cards land when they are first added, which
+// the resizing above has already scrambled on the main page.
+const placementPage = await (await browser.newContext({ viewport: { width: 1600, height: 950 } })).newPage();
+placementPage.on('pageerror', (error) => consoleErrors.push(`pageerror: ${error.message}`));
+await placementPage.goto(BASE, { waitUntil: 'networkidle' });
+await placementPage.waitForSelector('.drawer__item', { timeout: 20000 });
+
+const listNames = ['Megacap Tech', 'Semis', 'Banks', 'Energy'];
+for (const name of listNames) {
+  await placementPage
+    .locator('.drawer__item', { hasText: name })
+    .getByRole('button', { name: 'Add' })
+    .click();
+  // No settling pause: adding lists back to back is exactly the case where a
+  // card that has not finished loading can be landed on.
+}
+await placementPage.waitForFunction(
+  (count) => document.querySelectorAll('.react-flow__node').length === count,
+  listNames.length,
+  { timeout: 20000 },
+);
+await placementPage.waitForFunction(
+  () => document.querySelectorAll('.performance-table tbody tr').length >= 30,
+  null,
+  { timeout: 120000 },
+);
+await placementPage.waitForTimeout(1500);
+
+const overlaps = await placementPage.evaluate(() => {
+  const cards = [...document.querySelectorAll('.react-flow__node')].map((node) => ({
+    name: node.querySelector('.ticker-node__title').value,
+    rect: node.getBoundingClientRect(),
+  }));
+  const found = [];
+  for (let i = 0; i < cards.length; i += 1) {
+    for (let j = i + 1; j < cards.length; j += 1) {
+      const a = cards[i].rect;
+      const b = cards[j].rect;
+      const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+      const overlapY = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+      if (overlapX > 0 && overlapY > 0) {
+        found.push(`${cards[i].name} x ${cards[j].name} (${Math.round(overlapX)}x${Math.round(overlapY)}px)`);
+      }
+    }
+  }
+  return { count: cards.length, found };
+});
+check(
+  'four lists added back to back never overlap',
+  overlaps.count === 4 && overlaps.found.length === 0,
+  overlaps.found.length ? overlaps.found.join('; ') : `${overlaps.count} cards, no overlap`,
+);
+
+const noScroll = await placementPage.evaluate(() =>
+  [...document.querySelectorAll('.table-wrap')].map((wrap) => ({
+    v: wrap.scrollHeight > wrap.clientHeight + 1,
+    h: wrap.scrollWidth > wrap.clientWidth + 1,
+  })),
+);
+check(
+  'new cards are tall enough to show every row without scrolling',
+  noScroll.every((entry) => !entry.v && !entry.h),
+  JSON.stringify(noScroll),
+);
 
 console.log('\nconsole errors:', consoleErrors.length ? consoleErrors : 'none');
 const failed = results.filter((entry) => !entry.ok);
