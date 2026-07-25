@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import type { PerformanceRow } from '../api/watchlists';
 import { parseTickers } from '../storage/savedLists';
+import { useModifierZoom } from '../canvas/useModifierZoom';
+import { CloseIcon, PlusIcon } from './icons';
 
 type PerformanceTableProps = {
   rows: PerformanceRow[];
   /** When set, the table is always shown and a footer row lets users add tickers. */
   onAddTicker?: (raw: string) => void;
+  onRemoveTicker?: (ticker: string) => void;
 };
 
 const performanceColumns = [
@@ -21,12 +24,9 @@ const performanceColumns = [
 
 const COLUMN_COUNT = 3 + performanceColumns.length;
 
-export function PerformanceTable({ rows, onAddTicker }: PerformanceTableProps) {
+export function PerformanceTable({ rows, onAddTicker, onRemoveTicker }: PerformanceTableProps) {
   const [draft, setDraft] = useState('');
-
-  if (rows.length === 0 && !onAddTicker) {
-    return <div className="empty">No stock data to display yet.</div>;
-  }
+  const scrollRef = useModifierZoom<HTMLDivElement>();
 
   function submitAdd() {
     const trimmed = draft.trim();
@@ -37,34 +37,50 @@ export function PerformanceTable({ rows, onAddTicker }: PerformanceTableProps) {
     setDraft('');
   }
 
-  const emptyBody =
-    rows.length === 0 ? (
-      <tr>
-        <td colSpan={COLUMN_COUNT} className="performance-table__empty-hint">
-          No performance loaded yet. Add tickers here to load performance.
-        </td>
-      </tr>
-    ) : null;
+  if (rows.length === 0 && !onAddTicker) {
+    return <div className="empty">No stock data to display yet.</div>;
+  }
 
   return (
-    <div className="table-wrap nodrag nowheel">
+    <div className="table-wrap nodrag nowheel" ref={scrollRef}>
       <table className="performance-table" aria-label="Watchlist performance">
         <thead>
           <tr>
-            <th>Ticker</th>
-            <th>Price</th>
-            <th>Market Cap</th>
+            <th scope="col">Ticker</th>
+            <th scope="col">Price</th>
+            <th scope="col">Mkt Cap</th>
             {performanceColumns.map(([label]) => (
-              <th key={label}>{label}</th>
+              <th scope="col" key={label}>
+                {label}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {emptyBody}
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={COLUMN_COUNT} className="performance-table__empty-hint">
+                Nothing loaded yet — add a ticker below to pull its performance.
+              </td>
+            </tr>
+          ) : null}
           {rows.map((row) => (
             <tr key={row.ticker}>
               <td>
-                <strong>{row.ticker}</strong>
+                <div className="performance-table__ticker">
+                  <strong>{row.ticker}</strong>
+                  {onRemoveTicker ? (
+                    <button
+                      type="button"
+                      className="performance-table__remove nodrag"
+                      aria-label={`Remove ${row.ticker}`}
+                      title={`Remove ${row.ticker}`}
+                      onClick={() => onRemoveTicker(row.ticker)}
+                    >
+                      <CloseIcon />
+                    </button>
+                  ) : null}
+                </div>
               </td>
               <td>{row.price}</td>
               <td>{row.marketCap}</td>
@@ -79,7 +95,7 @@ export function PerformanceTable({ rows, onAddTicker }: PerformanceTableProps) {
         {onAddTicker ? (
           <tfoot>
             <tr className="performance-table__add-row">
-              <td>
+              <td colSpan={COLUMN_COUNT}>
                 <div className="performance-table__add-wrap nodrag">
                   <input
                     className="performance-table__add-input"
@@ -89,7 +105,7 @@ export function PerformanceTable({ rows, onAddTicker }: PerformanceTableProps) {
                     autoCorrect="off"
                     spellCheck={false}
                     aria-label="Ticker symbol to add"
-                    placeholder="AAPL"
+                    placeholder="Add ticker…"
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     onKeyDown={(event) => {
@@ -105,13 +121,11 @@ export function PerformanceTable({ rows, onAddTicker }: PerformanceTableProps) {
                     disabled={!parseTickers(draft).length}
                     onClick={submitAdd}
                   >
+                    <PlusIcon />
                     Add
                   </button>
                 </div>
               </td>
-              {/* {Array.from({ length: COLUMN_COUNT - 1 }, (_, index) => (
-                <td key={index}>—</td>
-              ))} */}
             </tr>
           </tfoot>
         ) : null}
