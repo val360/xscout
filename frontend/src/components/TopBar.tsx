@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { usePreferences } from '../prefs/PreferencesContext';
 import type { ScrollMode, ThemeMode } from '../storage/preferences';
 import {
@@ -28,7 +28,7 @@ const scrollOptions: { value: ScrollMode; label: string; icon: ReactNode }[] = [
   { value: 'pan', label: 'Scroll wheel pans the canvas (⌘/Ctrl + scroll zooms)', icon: <ScrollPanIcon /> },
 ];
 
-export function TopBar({ nodeCount, busy, onRefreshAll }: TopBarProps) {
+function TopBarComponent({ nodeCount, busy, onRefreshAll }: TopBarProps) {
   const { theme, setTheme, scrollMode, setScrollMode, drawerOpen, setDrawerOpen } =
     usePreferences();
 
@@ -96,3 +96,5 @@ export function TopBar({ nodeCount, busy, onRefreshAll }: TopBarProps) {
     </header>
   );
 }
+
+export const TopBar = memo(TopBarComponent);

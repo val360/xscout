@@ -5,9 +5,12 @@ import { FitViewIcon, MapIcon, MinusIcon, PlusIcon } from './icons';
 
 export function CanvasControls({ canFitView }: { canFitView: boolean }) {
   const { zoomIn, zoomOut, zoomTo, fitView } = useReactFlow();
-  const zoom = useStore((state) => state.transform[2]);
+  // Subscribe to whole percentage points so a continuous zoom gesture only
+  // re-renders this panel when the readout actually changes.
+  const zoomPercent = useStore((state) => Math.round(state.transform[2] * 100));
   const { showMinimap, setShowMinimap } = usePreferences();
 
+  const zoom = zoomPercent / 100;
   const tween = { duration: VIEWPORT_TWEEN_MS };
 
   return (
@@ -30,7 +33,7 @@ export function CanvasControls({ canFitView }: { canFitView: boolean }) {
           aria-label="Reset zoom to 100%"
           title="Reset zoom to 100%"
         >
-          {Math.round(zoom * 100)}%
+          {zoomPercent}%
         </button>
         <button
           type="button"

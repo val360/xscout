@@ -34,8 +34,8 @@
   --warning-soft: #fdf3dd;
 
   --grid-dot: #c2cad9;
-  --minimap-mask: rgb(226 231 240 / 65%);
-  --minimap-node: #cbd4e4;
+  --minimap-mask: rgb(206 214 228 / 62%);
+  --minimap-node: #9dabc4;
   --sticky-shadow: rgb(16 23 40 / 45%);
   --scrollbar: #c6cddb;
   --scrollbar-hover: #a8b2c6;
@@ -74,8 +74,8 @@
   --warning-soft: rgb(242 207 125 / 12%);
 
   --grid-dot: #2b3549;
-  --minimap-mask: rgb(8 11 18 / 62%);
-  --minimap-node: #2b3548;
+  --minimap-mask: rgb(6 9 15 / 66%);
+  --minimap-node: #3d4b66;
   --sticky-shadow: rgb(0 0 0 / 70%);
   --scrollbar: #2c3648;
   --scrollbar-hover: #3c4a63;
@@ -776,9 +776,13 @@ kbd {
 
 /* React Flow ships 1px-wide edge controls, which are near impossible to grab.
    These rules widen the hit area to ~14px while keeping the visible line thin. */
+/* `visibility` rather than `opacity` alone: hidden controls are then skipped
+   during paint, which keeps dragging a card as cheap as it was before the
+   handles became permanent. */
 .react-flow__resize-control {
   opacity: 0;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  visibility: hidden;
 }
 
 .react-flow__node:hover .react-flow__resize-control,
@@ -786,6 +790,7 @@ kbd {
 .react-flow__resize-control:hover,
 .react-flow__resize-control:active {
   opacity: 1;
+  visibility: visible;
 }
 
 .react-flow__resize-control.line {
@@ -850,6 +855,7 @@ kbd {
 .react-flow__resize-control.handle.bottom.right {
   height: 22px;
   opacity: 1;
+  visibility: visible;
   width: 22px;
 }
 
@@ -903,6 +909,20 @@ kbd {
 .canvas.is-moving .ticker-node {
   box-shadow: none;
   transition: none;
+}
+
+/* While a card is being dragged nothing else on the canvas is interactive, so
+   skip hover work the pointer would otherwise trigger as it sweeps past. */
+.canvas.is-dragging .react-flow__node:not(.dragging) {
+  pointer-events: none;
+}
+
+.canvas.is-dragging .ticker-node {
+  transition: none;
+}
+
+.canvas.is-dragging .performance-table tbody tr:hover td {
+  background: var(--surface);
 }
 
 .ticker-node__progress {
@@ -1024,11 +1044,12 @@ kbd {
 }
 
 .performance-table {
-  --ticker-column-width: 6.75rem;
-  --price-column-width: 5.5rem;
+  --ticker-column-width: 5rem;
+  --price-column-width: 4.5rem;
 
   border-collapse: separate;
   border-spacing: 0;
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
   min-width: 100%;
   width: max-content;
@@ -1038,7 +1059,7 @@ kbd {
 .performance-table td {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 6px 9px;
+  padding: 5px 7px;
   text-align: right;
   white-space: nowrap;
 }
@@ -1051,9 +1072,9 @@ kbd {
 .performance-table thead th {
   background: var(--surface-muted);
   color: var(--text-subtle);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   position: sticky;
   text-transform: uppercase;
   top: 0;
@@ -1095,12 +1116,14 @@ kbd {
 
 .performance-table th:nth-child(3),
 .performance-table td:nth-child(3) {
-  min-width: 6.5rem;
+  min-width: 4.5rem;
 }
 
 .performance-table th:nth-child(n + 4),
 .performance-table td:nth-child(n + 4) {
-  min-width: 3.9rem;
+  min-width: 3.25rem;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .performance-table__ticker {
@@ -1111,7 +1134,6 @@ kbd {
 }
 
 .performance-table__ticker strong {
-  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }

@@ -18,9 +18,11 @@ import { fetchWatchlistPerformance, type PerformanceRow } from './api/watchlists
 import { NodeActionsProvider, type NodeActions } from './canvas/NodeActionsContext';
 import {
   DEFAULT_NODE_WIDTH,
+  ESTIMATED_NODE_HEIGHT,
   LIST_DRAG_MIME,
   MAX_ZOOM,
   MIN_ZOOM,
+  NODE_GAP,
   VIEWPORT_TWEEN_MS,
 } from './canvas/constants';
 import { CanvasControls } from './components/CanvasControls';
@@ -134,8 +136,17 @@ function Workspace() {
   const { drawerOpen, scrollMode, showMinimap, resolvedTheme } = usePreferences();
   const listsApi = useLists();
   const { status: listsStatus, lists, listsById } = listsApi;
-  const { screenToFlowPosition, setCenter, getNode, getZoom, zoomIn, zoomOut, zoomTo, fitView } =
-    useReactFlow();
+  const {
+    screenToFlowPosition,
+    setCenter,
+    getNode,
+    getNodes,
+    getZoom,
+    zoomIn,
+    zoomOut,
+    zoomTo,
+    fitView,
+  } = useReactFlow();
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const nodesRef = useRef(nodes);
@@ -281,7 +292,7 @@ function Workspace() {
         return;
       }
       const width = node.measured?.width ?? DEFAULT_NODE_WIDTH;
-      const height = node.measured?.height ?? 320;
+      const height = node.measured?.height ?? ESTIMATED_NODE_HEIGHT;
       setNodes((current) =>
         current.map((entry) =>
           entry.selected === (entry.id === nodeId)
@@ -297,28 +308,47 @@ function Workspace() {
     [getNode, getZoom, setCenter, setNodes],
   );
 
-  /** Cascades new cards from the top-left of the visible area, window-manager style. */
+  /**
+   * Walks a grid outwards from the top-left of the visible area and returns the
+   * first slot that does not collide with an existing card, so adding several
+   * lists in a row lays them out side by side instead of stacking them.
+   */
   const nextFreePosition = useCallback((): XYPosition => {
     const rect = canvasRef.current?.getBoundingClientRect();
     const origin = screenToFlowPosition({
-      x: (rect?.left ?? 0) + 72,
-      y: (rect?.top ?? 0) + 72,
+      x: (rect?.left ?? 0) + 48,
+      y: (rect?.top ?? 0) + 48,
     });
-    const candidate = { ...origin };
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      const taken = nodesRef.current.some(
-        (node) =>
-          Math.abs(node.position.x - candidate.x) < 40 &&
-          Math.abs(node.position.y - candidate.y) < 40,
-      );
-      if (!taken) {
-        break;
+
+    const occupied = getNodes().map((node) => ({
+      x: node.position.x,
+      y: node.position.y,
+      width: node.measured?.width ?? (Number(node.style?.width) || DEFAULT_NODE_WIDTH),
+      height: node.measured?.height ?? ESTIMATED_NODE_HEIGHT,
+    }));
+
+    const stepX = DEFAULT_NODE_WIDTH + NODE_GAP;
+    const stepY = ESTIMATED_NODE_HEIGHT + NODE_GAP;
+
+    // Two columns keeps a growing canvas roughly square, so "fit view" lands on
+    // a zoom level where the tables are still readable.
+    for (let row = 0; row < 40; row += 1) {
+      for (let column = 0; column < 2; column += 1) {
+        const candidate = { x: origin.x + column * stepX, y: origin.y + row * stepY };
+        const collides = occupied.some(
+          (node) =>
+            candidate.x < node.x + node.width + NODE_GAP &&
+            candidate.x + DEFAULT_NODE_WIDTH + NODE_GAP > node.x &&
+            candidate.y < node.y + node.height + NODE_GAP &&
+            candidate.y + ESTIMATED_NODE_HEIGHT + NODE_GAP > node.y,
+        );
+        if (!collides) {
+          return candidate;
+        }
       }
-      candidate.x += 44;
-      candidate.y += 44;
     }
-    return candidate;
-  }, [screenToFlowPosition]);
+    return origin;
+  }, [getNodes, screenToFlowPosition]);
 
   const addListToCanvas = useCallback(
     (listId: string, tickers: string[], position?: XYPosition) => {
@@ -499,6 +529,16 @@ function Workspace() {
     canvasRef.current?.classList.add('is-moving');
   }, []);
 
+  // Marking the canvas mid-drag lets CSS switch off hover highlights and
+  // hit-testing on the cards you are not dragging.
+  const handleNodeDragStart = useCallback(() => {
+    canvasRef.current?.classList.add('is-dragging');
+  }, []);
+
+  const handleNodeDragStop = useCallback(() => {
+    canvasRef.current?.classList.remove('is-dragging');
+  }, []);
+
   const handleMoveEnd = useCallback(
     (_event: unknown, nextViewport: Viewport) => {
       canvasRef.current?.classList.remove('is-moving');
@@ -539,9 +579,15 @@ function Workspace() {
     () => nodes.some((node) => node.data.status === 'loading'),
     [nodes],
   );
+  // Keyed on the list ids rather than on `nodes` so dragging a card does not
+  // hand the drawer a brand new Set on every frame.
+  const pinnedKey = nodes
+    .map((node) => node.data.listId)
+    .sort()
+    .join(',');
   const pinnedListIds = useMemo(
-    () => new Set(nodes.map((node) => node.data.listId)),
-    [nodes],
+    () => new Set(pinnedKey ? pinnedKey.split(',') : []),
+    [pinnedKey],
   );
 
   const focusList = useCallback(
@@ -629,6 +675,8 @@ function Workspace() {
               onConnect={onConnect}
               onMoveStart={handleMoveStart}
               onMoveEnd={handleMoveEnd}
+              onNodeDragStart={handleNodeDragStart}
+              onNodeDragStop={handleNodeDragStop}
               defaultViewport={initialCanvas.viewport ?? DEFAULT_VIEWPORT}
               fitView={initialCanvas.viewport === undefined && initialCanvas.nodes.length > 0}
               fitViewOptions={{ padding: 0.15 }}
@@ -650,7 +698,9 @@ function Workspace() {
             >
               <Background gap={22} size={1.6} variant={BackgroundVariant.Dots} />
               <CanvasControls canFitView={canvasHasContent} />
-              {showMinimap ? <MiniMap pannable zoomable ariaLabel="Canvas minimap" /> : null}
+              {showMinimap && canvasHasContent ? (
+                <MiniMap pannable zoomable nodeBorderRadius={4} ariaLabel="Canvas minimap" />
+              ) : null}
             </ReactFlow>
           </NodeActionsProvider>
 

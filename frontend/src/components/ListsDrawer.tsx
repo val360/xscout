@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { LIST_DRAG_MIME } from '../canvas/constants';
 import { useLists } from '../lists/ListsContext';
 import { usePreferences } from '../prefs/PreferencesContext';
-import { DRAWER_MAX_WIDTH, DRAWER_MIN_WIDTH } from '../storage/preferences';
+import { DEFAULT_PREFERENCES, DRAWER_MAX_WIDTH, DRAWER_MIN_WIDTH } from '../storage/preferences';
 import { parseTickers } from '../storage/savedLists';
 import { PlusIcon, SearchIcon, TargetIcon, TrashIcon } from './icons';
 
@@ -14,7 +14,7 @@ type ListsDrawerProps = {
 
 const DEFAULT_NEW_TICKERS = 'AAPL, MSFT, NVDA';
 
-export function ListsDrawer({ pinnedListIds, onAddToCanvas, onFocusList }: ListsDrawerProps) {
+function ListsDrawerComponent({ pinnedListIds, onAddToCanvas, onFocusList }: ListsDrawerProps) {
   const { status, error, lists, createList, removeList, refresh } = useLists();
   const { drawerWidth, setDrawerWidth } = usePreferences();
   const [query, setQuery] = useState('');
@@ -292,8 +292,12 @@ export function ListsDrawer({ pinnedListIds, onAddToCanvas, onFocusList }: Lists
         aria-orientation="vertical"
         aria-label="Resize lists panel"
         onPointerDown={startResize}
-        onDoubleClick={() => setDrawerWidth(304)}
+        onDoubleClick={() => setDrawerWidth(DEFAULT_PREFERENCES.drawerWidth)}
       />
     </aside>
   );
 }
+
+// Memoised so a canvas drag, which re-renders the workspace on every frame,
+// does not repaint the whole library.
+export const ListsDrawer = memo(ListsDrawerComponent);
