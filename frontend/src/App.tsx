@@ -29,6 +29,7 @@ import {
 } from './canvas/constants';
 import { CanvasControls } from './components/CanvasControls';
 import { ListsDrawer } from './components/ListsDrawer';
+import { OffscreenNotice } from './components/OffscreenNotice';
 import { TickerListNode, type TickerListNodeData } from './components/TickerListNode';
 import { TopBar } from './components/TopBar';
 import { ListsProvider, useLists } from './lists/ListsContext';
@@ -701,6 +702,7 @@ function Workspace() {
             >
               <Background gap={22} size={1.6} variant={BackgroundVariant.Dots} />
               <CanvasControls canFitView={canvasHasContent} />
+              <OffscreenNotice />
               {showMinimap && canvasHasContent ? (
                 <MiniMap pannable zoomable nodeBorderRadius={4} ariaLabel="Canvas minimap" />
               ) : null}

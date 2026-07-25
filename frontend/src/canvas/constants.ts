@@ -11,7 +11,8 @@ export const MIN_NODE_HEIGHT = 200;
 
 /**
  * Card chrome that never scrolls: title row, timestamp, table header and the
- * add-ticker footer. Measured with scripts/tmp/probe-metrics.mjs.
+ * add-ticker footer. Re-derive with `node scripts/measure-card.mjs` after
+ * changing any of those.
  */
 const NODE_CHROME_HEIGHT = 144;
 

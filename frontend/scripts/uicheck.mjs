@@ -378,6 +378,52 @@ check(
   JSON.stringify(noScroll),
 );
 
+// ------------------------------------------------- recovering a lost viewport
+check(
+  'no off-screen notice while cards are in view',
+  (await placementPage.locator('.offscreen-notice').count()) === 0,
+);
+
+// Drag the canvas away until nothing is left on screen. One drag is capped by
+// the window size, so repeat it — this is what wandering off actually looks like.
+const pane = await placementPage.locator('.react-flow__pane').boundingBox();
+const notice = placementPage.locator('.offscreen-notice');
+for (let attempt = 0; attempt < 6 && (await notice.count()) === 0; attempt += 1) {
+  const from = { x: pane.x + pane.width - 40, y: pane.y + pane.height - 40 };
+  await placementPage.mouse.move(from.x, from.y);
+  await placementPage.mouse.down();
+  for (let step = 1; step <= 10; step += 1) {
+    await placementPage.mouse.move(
+      from.x - ((pane.width - 100) * step) / 10,
+      from.y - ((pane.height - 100) * step) / 10,
+    );
+  }
+  await placementPage.mouse.up();
+  await placementPage.waitForTimeout(250);
+}
+check(
+  'panning every card off screen offers a way back',
+  (await notice.count()) === 1,
+  (await notice.count()) === 1 ? await notice.innerText() : 'notice missing',
+);
+
+if ((await notice.count()) === 1) {
+  await notice.getByRole('button').click();
+  await placementPage.waitForTimeout(700);
+  const restored = await placementPage.evaluate(() => {
+    const pane = document.querySelector('.react-flow').getBoundingClientRect();
+    return [...document.querySelectorAll('.react-flow__node')].filter((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.right > pane.left && rect.left < pane.right && rect.bottom > pane.top && rect.top < pane.bottom;
+    }).length;
+  });
+  check(
+    'the way back brings every card into view',
+    restored === 4 && (await notice.count()) === 0,
+    `${restored}/4 cards visible`,
+  );
+}
+
 console.log('\nconsole errors:', consoleErrors.length ? consoleErrors : 'none');
 const failed = results.filter((entry) => !entry.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

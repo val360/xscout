@@ -772,6 +772,32 @@ kbd {
   color: var(--text);
 }
 
+.react-flow__panel.offscreen-notice {
+  align-items: center;
+  animation: offscreen-notice-in 0.16s ease;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.82rem;
+  gap: 10px;
+  margin: 14px;
+  padding: 7px 7px 7px 15px;
+}
+
+.offscreen-notice .button {
+  padding: 5px 11px;
+}
+
+@keyframes offscreen-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
 /* ------------------------------------------------------- resize affordances */
 
 /* React Flow ships 1px edge controls and 4px corner handles, which are close to
@@ -794,7 +820,8 @@ kbd {
   content: '';
   opacity: 0;
   position: absolute;
-  transition: opacity 0.12s ease, height 0.1s ease, width 0.1s ease;
+  transition: opacity 0.12s ease, height 0.1s ease, width 0.1s ease,
+    box-shadow 0.1s ease;
 }
 
 .react-flow__node:hover .react-flow__resize-control::after,
@@ -919,7 +946,8 @@ kbd {
 .react-flow__resize-control.handle.bottom.right::after {
   border-color: var(--text-subtle);
   opacity: 1;
-  transition: border-color 0.12s ease, height 0.1s ease, width 0.1s ease;
+  transition: border-color 0.12s ease, height 0.1s ease, width 0.1s ease,
+    box-shadow 0.1s ease;
 }
 
 .react-flow__node:hover .react-flow__resize-control.handle.bottom.right::after,
@@ -928,12 +956,19 @@ kbd {
   border-color: var(--accent);
 }
 
-/* Growing the knob under the pointer makes the last few pixels of the approach
-   forgiving: once it is lit up, it is already easy to hit. */
+/* Growing the knob and haloing it under the pointer makes the last few pixels of
+   the approach forgiving: once it has lit up, it is already easy to hit. */
 .react-flow__resize-control.handle:hover::after,
 .react-flow__resize-control.handle:active::after {
-  height: 14px;
-  width: 14px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  height: 15px;
+  width: 15px;
+}
+
+.react-flow__resize-control.line:hover::after,
+.react-flow__resize-control.line:active::after {
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 /* -------------------------------------------------------------------- node */
