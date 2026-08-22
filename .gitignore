@@ -20,6 +20,8 @@ frontend/node_modules/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+frontend/playwright-report/
+frontend/test-results/
 
 # Build artifacts
 build/
