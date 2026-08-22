@@ -1,4 +1,3 @@
-import { appendFileSync } from 'node:fs';
 import { expect, test, type Browser, type Page, type ViewportSize } from '@playwright/test';
 import {
   storedViewportToViewport,
@@ -9,8 +8,6 @@ const CANVAS_KEY_V1 = 'xscout.canvas.v1';
 const CANVAS_KEY_V2 = 'xscout.canvas.v2';
 const CANVAS_KEY_V3 = 'xscout.canvas.v3';
 const PREFS_KEY = 'xscout.prefs.v1';
-const LOG_PATH = '/opt/cursor/logs/debug.log';
-const RUN_PHASE = process.env.VIEWPORT_TEST_PHASE ?? 'unspecified';
 
 const sourceNode = {
   id: 'saved-node',
@@ -48,19 +45,6 @@ type LayoutMeasurement = {
     v3: JsonObject | null;
   };
 };
-
-function agentLog(hypothesisId: string, location: string, message: string, data: unknown) {
-  appendFileSync(
-    LOG_PATH,
-    `${JSON.stringify({
-      hypothesisId,
-      location,
-      message,
-      data: { runPhase: RUN_PHASE, value: data },
-      timestamp: Date.now(),
-    })}\n`,
-  );
-}
 
 async function openStoredCanvas(
   browser: Browser,
@@ -202,27 +186,13 @@ test('migrates raw transforms and preserves flow-space center across resolutions
     viewport: rawViewport,
   };
 
-  // #region agent log
-  agentLog('H5,H6', 'tests/viewport-persistence.spec.ts:v2-fixture', 'raw v2 fixture', {
-    screenSizes: [wideScreen, smallScreen],
-    viewport: rawViewport,
-    node: { position: sourceNode.position, style: sourceNode.style },
-  });
-  // #endregion
-
   const wideRun = await openStoredCanvas(browser, wideScreen, { v2: v2Fixture });
   const wide = await measure(wideRun.page, wideScreen);
   await wideRun.close();
-  // #region agent log
-  agentLog('H5', 'tests/viewport-persistence.spec.ts:v2-wide', 'raw v2 wide restore', wide);
-  // #endregion
 
   const smallRun = await openStoredCanvas(browser, smallScreen, { v2: v2Fixture });
   const small = await measure(smallRun.page, smallScreen);
   await smallRun.close();
-  // #region agent log
-  agentLog('H5', 'tests/viewport-persistence.spec.ts:v2-small', 'raw v2 small restore', small);
-  // #endregion
 
   const migratedV3 = wide.storage.v3;
   let portable: LayoutMeasurement | null = null;
@@ -231,14 +201,6 @@ test('migrates raw transforms and preserves flow-space center across resolutions
     portable = await measure(portableRun.page, smallScreen);
     await portableRun.close();
   }
-  // #region agent log
-  agentLog(
-    'H5,H6',
-    'tests/viewport-persistence.spec.ts:v3-portable',
-    'migrated center restore comparison',
-    { wide, portable },
-  );
-  // #endregion
 
   const legacyFixture = {
     nodes: [
@@ -260,14 +222,6 @@ test('migrates raw transforms and preserves flow-space center across resolutions
   );
   const legacy = await measure(legacyRun.page, smallScreen);
   await legacyRun.close();
-  // #region agent log
-  agentLog(
-    'H1,H3,H6',
-    'tests/viewport-persistence.spec.ts:legacy',
-    'legacy migration viewport result',
-    legacy,
-  );
-  // #endregion
 
   const summary = {
     rawCenterDelta: {
@@ -285,15 +239,7 @@ test('migrates raw transforms and preserves flow-space center across resolutions
     legacyTransform: legacy.transform,
     legacyV3: legacy.storage.v3 !== null,
   };
-  // #region agent log
-  agentLog(
-    'H1,H5,H6',
-    'tests/viewport-persistence.spec.ts:summary',
-    'viewport persistence assertions',
-    summary,
-  );
-  // #endregion
-  console.log(JSON.stringify(summary, null, 2));
+  console.log('viewport persistence:', JSON.stringify(summary));
 
   expect(Math.abs(summary.rawCenterDelta.x)).toBeGreaterThan(400);
   expect(Math.abs(summary.rawCenterDelta.y)).toBeGreaterThan(200);
