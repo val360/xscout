@@ -40,8 +40,12 @@ import {
   loadLegacyCanvas,
   parseTickers,
   saveCanvas,
+  storedViewportToViewport,
+  viewportToStoredViewport,
   type CanvasNode,
-  type StoredCanvas,
+  type CanvasSize,
+  type LoadedCanvas,
+  type StoredViewport,
 } from './storage/savedLists';
 
 const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 };
@@ -104,12 +108,17 @@ function serializeNodes(nodes: CanvasNode[]): CanvasNode[] {
   }));
 }
 
-function getInitialCanvas(): StoredCanvas {
+function getInitialCanvas(): LoadedCanvas {
   const stored = loadCanvas();
   if (stored) {
     return { ...stored, nodes: stored.nodes.map(withDefaultSize) };
   }
-  return { nodes: [], edges: [] as Edge[], viewport: undefined };
+  return {
+    nodes: [],
+    edges: [] as Edge[],
+    viewport: undefined,
+    rawViewport: undefined,
+  };
 }
 
 /** Cheap structural comparison so cached node data can keep its identity. */
@@ -149,12 +158,14 @@ function Workspace() {
     zoomOut,
     zoomTo,
     fitView,
+    setViewport,
   } = useReactFlow();
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const nodesRef = useRef(nodes);
   const listsApiRef = useRef(listsApi);
-  const viewportRef = useRef<Viewport>(initialCanvas.viewport ?? DEFAULT_VIEWPORT);
+  const viewportRef = useRef<Viewport>(initialCanvas.rawViewport ?? DEFAULT_VIEWPORT);
+  const storedViewportRef = useRef<StoredViewport | undefined>(initialCanvas.viewport);
   const migrationAttempted = useRef(false);
 
   useEffect(() => {
@@ -170,6 +181,27 @@ function Workspace() {
   const persistRef = useRef({ nodes, edges });
   const saveTimer = useRef<number | null>(null);
 
+  const getCanvasSize = useCallback((): CanvasSize | null => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) {
+      return null;
+    }
+    return { width: rect.width, height: rect.height };
+  }, []);
+
+  const captureViewport = useCallback(
+    (viewport: Viewport): StoredViewport | undefined => {
+      const canvas = getCanvasSize();
+      if (!canvas) {
+        return storedViewportRef.current;
+      }
+      const stored = viewportToStoredViewport(viewport, canvas);
+      storedViewportRef.current = stored;
+      return stored;
+    },
+    [getCanvasSize],
+  );
+
   const flushSave = useCallback(() => {
     if (saveTimer.current !== null) {
       window.clearTimeout(saveTimer.current);
@@ -178,9 +210,9 @@ function Workspace() {
     saveCanvas({
       nodes: serializeNodes(persistRef.current.nodes),
       edges: persistRef.current.edges,
-      viewport: viewportRef.current,
+      viewport: storedViewportRef.current ?? captureViewport(viewportRef.current),
     });
-  }, []);
+  }, [captureViewport]);
 
   // Dragging, resizing and panning all fire a stream of changes; writing the
   // whole canvas to localStorage on each one stalls the interaction.
@@ -418,7 +450,7 @@ function Workspace() {
 
   // -------------------------------------------------------------- housekeeping
 
-  // One-time v1 -> v2 migration: if a legacy canvas exists with inline
+  // One-time v1 -> v3 migration: if a legacy canvas exists with inline
   // name/tickers, upload each node as a server list, replace the nodes
   // with id-only references, and clear the legacy key.
   useEffect(() => {
@@ -460,12 +492,24 @@ function Workspace() {
         }
       }
       if (migratedNodes.length > 0) {
+        const migratedEdges = legacy.edges ?? [];
+        if (legacy.viewport) {
+          viewportRef.current = legacy.viewport;
+          captureViewport(legacy.viewport);
+          void setViewport(legacy.viewport, { duration: 0 });
+        }
+        persistRef.current = { nodes: migratedNodes, edges: migratedEdges };
+        saveCanvas({
+          nodes: serializeNodes(migratedNodes),
+          edges: migratedEdges,
+          viewport: storedViewportRef.current,
+        });
         setNodes(migratedNodes);
-        setEdges(legacy.edges ?? []);
+        setEdges(migratedEdges);
       }
       clearLegacyCanvas();
     })();
-  }, [listsStatus, setEdges, setNodes]);
+  }, [captureViewport, listsStatus, setEdges, setNodes, setViewport]);
 
   // Drop canvas nodes whose underlying server list has been deleted, but
   // only once we've successfully loaded the list catalog (so a network
@@ -547,10 +591,22 @@ function Workspace() {
     (_event: unknown, nextViewport: Viewport) => {
       canvasRef.current?.classList.remove('is-moving');
       viewportRef.current = nextViewport;
+      captureViewport(nextViewport);
       scheduleSave();
     },
-    [scheduleSave],
+    [captureViewport, scheduleSave],
   );
+
+  const handleFlowInit = useCallback(() => {
+    const canvas = getCanvasSize();
+    if (initialCanvas.viewport && canvas) {
+      const restored = storedViewportToViewport(initialCanvas.viewport, canvas);
+      viewportRef.current = restored;
+      void setViewport(restored, { duration: 0 });
+      return;
+    }
+    captureViewport(viewportRef.current);
+  }, [captureViewport, getCanvasSize, initialCanvas.viewport, setViewport]);
 
   const handleDragOver = useCallback((event: React.DragEvent) => {
     if (!event.dataTransfer.types.includes(LIST_DRAG_MIME)) {
@@ -677,12 +733,17 @@ function Workspace() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onInit={handleFlowInit}
               onMoveStart={handleMoveStart}
               onMoveEnd={handleMoveEnd}
               onNodeDragStart={handleNodeDragStart}
               onNodeDragStop={handleNodeDragStop}
-              defaultViewport={initialCanvas.viewport ?? DEFAULT_VIEWPORT}
-              fitView={initialCanvas.viewport === undefined && initialCanvas.nodes.length > 0}
+              defaultViewport={initialCanvas.rawViewport ?? DEFAULT_VIEWPORT}
+              fitView={
+                initialCanvas.viewport === undefined &&
+                initialCanvas.rawViewport === undefined &&
+                initialCanvas.nodes.length > 0
+              }
               fitViewOptions={{ padding: 0.15 }}
               colorMode={resolvedTheme}
               minZoom={MIN_ZOOM}

@@ -1,5 +1,9 @@
 import { appendFileSync } from 'node:fs';
 import { expect, test, type Browser, type Page, type ViewportSize } from '@playwright/test';
+import {
+  storedViewportToViewport,
+  viewportToStoredViewport,
+} from '../src/storage/savedLists';
 
 const CANVAS_KEY_V1 = 'xscout.canvas.v1';
 const CANVAS_KEY_V2 = 'xscout.canvas.v2';
@@ -175,6 +179,19 @@ async function measure(page: Page, screen: ViewportSize): Promise<LayoutMeasurem
     },
   );
 }
+
+test('flow-space center is stable at exact 1920x1080 and 1280x720 canvas sizes', () => {
+  const sourceCanvas = { width: 1920, height: 1080 };
+  const targetCanvas = { width: 1280, height: 720 };
+  const stored = viewportToStoredViewport(rawViewport, sourceCanvas);
+  const restored = storedViewportToViewport(stored, targetCanvas);
+  const targetCenter = viewportToStoredViewport(restored, targetCanvas);
+
+  expect(targetCenter.center.x).toBeCloseTo(stored.center.x, 10);
+  expect(targetCenter.center.y).toBeCloseTo(stored.center.y, 10);
+  expect(targetCenter.zoom).toBe(stored.zoom);
+  expect(restored).toEqual({ x: -1120, y: -680, zoom: 0.75 });
+});
 
 test('migrates raw transforms and preserves flow-space center across resolutions', async ({
   browser,
