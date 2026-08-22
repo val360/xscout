@@ -97,7 +97,11 @@ function serializeNodes(nodes: CanvasNode[]): CanvasNode[] {
     id: node.id,
     type: node.type,
     position: node.position,
-    style: node.style,
+    style: {
+      ...node.style,
+      width: node.width ?? node.style?.width,
+      height: node.height ?? node.style?.height,
+    },
     data: {
       listId: node.data.listId,
       name: node.data.name,

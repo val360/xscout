@@ -53,10 +53,13 @@ function expectOnGrid(value: number) {
   expect(value).toBeCloseTo(Math.round(value / SNAP_SIZE) * SNAP_SIZE, 5);
 }
 
-test('dragging and resizing use half-grid increments', async ({ page }) => {
+test('dragging and resizing use half-grid increments and persist across reload', async ({ page }) => {
   await mockApi(page);
   await page.addInitScript(
     ({ canvasKey, canvas }) => {
+      if (window.localStorage.getItem(canvasKey)) {
+        return;
+      }
       window.localStorage.clear();
       window.localStorage.setItem(canvasKey, JSON.stringify(canvas));
       window.localStorage.setItem(
@@ -120,13 +123,15 @@ test('dragging and resizing use half-grid increments', async ({ page }) => {
   expectOnGrid(afterDrag.position.y - beforeDrag.position.y);
 
   const beforeResize = afterDrag;
-  const resizeBox = await node.boundingBox();
-  if (!resizeBox) {
-    throw new Error('Grid node has no bounding box after dragging');
+  const resizeControl = node.locator('.react-flow__resize-control.handle.bottom.right');
+  await expect(resizeControl).toBeVisible();
+  const handleBox = await resizeControl.boundingBox();
+  if (!handleBox) {
+    throw new Error('Bottom-right resize control has no bounding box');
   }
   const resizeStart = {
-    x: resizeBox.x + resizeBox.width,
-    y: resizeBox.y + resizeBox.height,
+    x: handleBox.x + handleBox.width / 2,
+    y: handleBox.y + handleBox.height / 2,
   };
   await page.mouse.move(resizeStart.x, resizeStart.y);
   await page.mouse.down();
@@ -141,4 +146,13 @@ test('dragging and resizing use half-grid increments', async ({ page }) => {
   expectOnGrid(afterResize.style.height);
   expectOnGrid(afterResize.style.width - beforeResize.style.width);
   expectOnGrid(afterResize.style.height - beforeResize.style.height);
+
+  await page.reload();
+  await expect(node).toBeVisible();
+  await expect(node).toHaveCSS('width', `${afterResize.style.width}px`);
+  await expect(node).toHaveCSS('height', `${afterResize.style.height}px`);
+  await page.waitForTimeout(450);
+
+  const afterReload = await storedNode(page);
+  expect(afterReload).toEqual(afterResize);
 });
