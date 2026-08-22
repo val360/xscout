@@ -17,6 +17,8 @@ import {
 import { fetchWatchlistPerformance, type PerformanceRow } from './api/watchlists';
 import { NodeActionsProvider, type NodeActions } from './canvas/NodeActionsContext';
 import {
+  CANVAS_GRID_SIZE,
+  CANVAS_SNAP_GRID,
   DEFAULT_NODE_WIDTH,
   ESTIMATED_NODE_HEIGHT,
   LIST_DRAG_MIME,
@@ -748,6 +750,8 @@ function Workspace() {
               colorMode={resolvedTheme}
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
+              snapToGrid
+              snapGrid={CANVAS_SNAP_GRID}
               zoomOnScroll={scrollMode === 'zoom'}
               panOnScroll={scrollMode === 'pan'}
               panOnScrollSpeed={0.75}
@@ -761,7 +765,7 @@ function Workspace() {
               proOptions={{ hideAttribution: false }}
               attributionPosition="bottom-right"
             >
-              <Background gap={22} size={1.6} variant={BackgroundVariant.Dots} />
+              <Background gap={CANVAS_GRID_SIZE} size={1.6} variant={BackgroundVariant.Dots} />
               <CanvasControls canFitView={canvasHasContent} />
               <OffscreenNotice />
               {showMinimap && canvasHasContent ? (
