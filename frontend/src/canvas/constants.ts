@@ -4,6 +4,13 @@ export const MAX_ZOOM = 2.5;
 /** Duration for programmatic viewport tweens (zoom buttons, fit view). */
 export const VIEWPORT_TWEEN_MS = 180;
 
+/** Distance between the visible canvas dots, in flow-space units. */
+export const CANVAS_GRID_SIZE = 22;
+
+/** Cards move and resize in half-dot increments for finer alignment. */
+export const CANVAS_SNAP_SIZE = CANVAS_GRID_SIZE / 2;
+export const CANVAS_SNAP_GRID: [number, number] = [CANVAS_SNAP_SIZE, CANVAS_SNAP_SIZE];
+
 /** Wide enough that every performance column fits without horizontal scrolling. */
 export const DEFAULT_NODE_WIDTH = 840;
 export const MIN_NODE_WIDTH = 320;
