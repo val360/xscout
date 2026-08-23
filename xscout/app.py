@@ -7,7 +7,7 @@ from typing import Any
 
 import flask
 
-from . import db, ticker_lists
+from . import db, ticker_lists, watts
 from .formatting import (
     format_currency,
     format_market_cap,
@@ -64,6 +64,20 @@ def watchlist_performance() -> flask.Response:
             "errors": errors,
         }
     )
+
+
+@app.get("/api/watts/dashboard")
+def watts_dashboard() -> flask.Response:
+    """Live proxies + research snapshots for the Watts Into Thoughts dashboard."""
+    refresh = flask.request.args.get("refresh", "").lower() in {"1", "true", "yes"}
+    try:
+        if refresh:
+            watts.clear_cache()
+        payload = watts.build_dashboard(use_cache=not refresh)
+    except Exception:
+        LOGGER.exception("Failed to build Watts dashboard")
+        return flask.jsonify({"error": "Failed to load the Watts dashboard."}), 500
+    return flask.jsonify(payload)
 
 
 @app.get("/api/ticker-lists")
