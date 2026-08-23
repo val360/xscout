@@ -34,6 +34,7 @@ import { ListsDrawer } from './components/ListsDrawer';
 import { OffscreenNotice } from './components/OffscreenNotice';
 import { TickerListNode, type TickerListNodeData } from './components/TickerListNode';
 import { TopBar } from './components/TopBar';
+import { WattsDashboard } from './components/WattsDashboard';
 import { ListsProvider, useLists } from './lists/ListsContext';
 import { PreferencesProvider, usePreferences } from './prefs/PreferencesContext';
 import {
@@ -708,7 +709,7 @@ function Workspace() {
 
   return (
     <div className="app-shell">
-      <TopBar nodeCount={nodes.length} busy={anyLoading} onRefreshAll={refreshAll} />
+      <TopBar variant="canvas" nodeCount={nodes.length} busy={anyLoading} onRefreshAll={refreshAll} />
 
       <div className="workspace">
         {drawerOpen ? (
@@ -802,8 +803,57 @@ export default function App() {
   return (
     <PreferencesProvider>
       <ListsProvider>
-        <Workspace />
+        <AppViews />
       </ListsProvider>
     </PreferencesProvider>
+  );
+}
+
+function AppViews() {
+  const { view, setView } = usePreferences();
+
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (hash === 'watts') {
+        setView('watts');
+      } else if (hash === 'canvas') {
+        setView('canvas');
+      }
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, [setView]);
+
+  useEffect(() => {
+    const desired = view === 'watts' ? '#watts' : '';
+    if (window.location.hash !== desired) {
+      const url = desired
+        ? `${window.location.pathname}${window.location.search}${desired}`
+        : `${window.location.pathname}${window.location.search}`;
+      window.history.replaceState(null, '', url);
+    }
+  }, [view]);
+
+  if (view === 'watts') {
+    return <WattsView />;
+  }
+  return <Workspace />;
+}
+
+function WattsView() {
+  const [busy, setBusy] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
+
+  return (
+    <div className="app-shell">
+      <TopBar
+        variant="watts"
+        busy={busy}
+        onRefreshAll={() => setRefreshToken((current) => current + 1)}
+      />
+      <WattsDashboard refreshToken={refreshToken} onBusyChange={setBusy} />
+    </div>
   );
 }

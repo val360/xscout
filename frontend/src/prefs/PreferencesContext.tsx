@@ -11,6 +11,7 @@ import {
   DEFAULT_PREFERENCES,
   loadPreferences,
   savePreferences,
+  type AppView,
   type Preferences,
   type ScrollMode,
   type ThemeMode,
@@ -24,6 +25,7 @@ type PreferencesContextValue = Preferences & {
   setDrawerOpen: (open: boolean) => void;
   setDrawerWidth: (width: number) => void;
   setShowMinimap: (show: boolean) => void;
+  setView: (view: AppView) => void;
 };
 
 const PreferencesContext = createContext<PreferencesContextValue | undefined>(undefined);
@@ -80,6 +82,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       setDrawerOpen: (drawerOpen) => patch({ drawerOpen }),
       setDrawerWidth: (drawerWidth) => patch({ drawerWidth }),
       setShowMinimap: (showMinimap) => patch({ showMinimap }),
+      setView: (view) => patch({ view }),
     }),
     [patch, preferences, resolvedTheme],
   );

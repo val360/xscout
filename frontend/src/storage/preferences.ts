@@ -3,12 +3,15 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 /** Whether a bare wheel gesture zooms the canvas or pans it (Figma-style). */
 export type ScrollMode = 'zoom' | 'pan';
 
+export type AppView = 'canvas' | 'watts';
+
 export type Preferences = {
   theme: ThemeMode;
   scrollMode: ScrollMode;
   drawerOpen: boolean;
   drawerWidth: number;
   showMinimap: boolean;
+  view: AppView;
 };
 
 // Kept in sync with the inline bootstrap script in index.html, which reads the
@@ -24,6 +27,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   drawerOpen: true,
   drawerWidth: 304,
   showMinimap: true,
+  view: 'canvas',
 };
 
 function clampDrawerWidth(value: unknown): number {
@@ -49,6 +53,7 @@ export function loadPreferences(): Preferences {
       drawerOpen: typeof parsed.drawerOpen === 'boolean' ? parsed.drawerOpen : true,
       drawerWidth: clampDrawerWidth(parsed.drawerWidth),
       showMinimap: typeof parsed.showMinimap === 'boolean' ? parsed.showMinimap : true,
+      view: parsed.view === 'watts' ? 'watts' : 'canvas',
     };
   } catch {
     return DEFAULT_PREFERENCES;

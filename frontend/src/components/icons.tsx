@@ -144,6 +144,24 @@ export function TargetIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function BoltIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Glyph
+      {...props}
+      d="M11.2 2.1a1 1 0 0 1 .96.04l.08.06 7 6A1 1 0 0 1 18.6 10H14l3.72 8.38A1 1 0 0 1 16.8 20H9.2a1 1 0 0 1-.92-1.4L12 10H5.4A1 1 0 0 1 4.6 8.2l6-6 .08-.06a1 1 0 0 1 .52-.04ZM8.12 8H13a1 1 0 0 1 .93 1.38L10.7 18h4.08L11.4 10.6A1 1 0 0 1 12.3 9h3.28L12 4.4 8.12 8Z"
+    />
+  );
+}
+
+export function CanvasIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Glyph
+      {...props}
+      d="M4 5h7a1 1 0 0 1 1 1v5H4V5Zm0 8h8v6H5a1 1 0 0 1-1-1v-5Zm10-3h6v8a1 1 0 0 1-1 1h-5v-9Zm0-5h5a1 1 0 0 1 1 1v3h-6V5Z"
+    />
+  );
+}
+
 export function KeyboardIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Glyph

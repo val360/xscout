@@ -12,6 +12,15 @@ layout — node positions, edges, viewport — is kept in `localStorage`.
 
 The app fetches live market data from Yahoo Finance through the `yfinance` library.
 
+A **Watts** dashboard (Canvas | Watts in the top bar, also at `/#watts`)
+tracks the "what to watch" items from Michael Nicoletos's *Watts Into
+Thoughts* note: electricity vs oil, grid connection queues, transformer
+lead times, financing conditions, regions with surplus power, data-center
+jurisdiction proxies, and intelligence per unit of energy. Live legs are
+Yahoo Finance total-return proxies; physical constraints (queue TW, wait
+times, token volumes) are dated research snapshots cited on each card.
+Each panel can be saved as a ticker list and pinned on the canvas.
+
 ## Requirements
 
 - Python 3.10+
