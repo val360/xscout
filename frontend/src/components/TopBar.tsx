@@ -32,10 +32,14 @@ const scrollOptions: { value: ScrollMode; label: string; icon: ReactNode }[] = [
 ];
 
 function TopBarComponent({ variant, nodeCount = 0, busy, onRefreshAll }: TopBarProps) {
-  const { theme, setTheme, scrollMode, setScrollMode, drawerOpen, setDrawerOpen, view, setView } =
+  const { theme, setTheme, scrollMode, setScrollMode, drawerOpen, setDrawerOpen, view } =
     usePreferences();
 
   const canvas = variant === 'canvas';
+
+  function navigateTo(next: AppView) {
+    window.location.hash = next === 'watts' ? 'watts' : '';
+  }
 
   return (
     <header className="topbar">
@@ -66,7 +70,7 @@ function TopBarComponent({ variant, nodeCount = 0, busy, onRefreshAll }: TopBarP
             aria-selected={view === 'canvas'}
             aria-pressed={view === 'canvas'}
             title="Ticker canvas"
-            onClick={() => setView('canvas')}
+            onClick={() => navigateTo('canvas')}
           >
             <CanvasIcon />
             Canvas
@@ -77,7 +81,7 @@ function TopBarComponent({ variant, nodeCount = 0, busy, onRefreshAll }: TopBarP
             aria-selected={view === 'watts'}
             aria-pressed={view === 'watts'}
             title="Watts Into Thoughts dashboard"
-            onClick={() => setView('watts')}
+            onClick={() => navigateTo('watts')}
           >
             <BoltIcon />
             Watts
