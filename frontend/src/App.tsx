@@ -813,28 +813,25 @@ function AppViews() {
   const { view, setView } = usePreferences();
 
   useEffect(() => {
+    let syncedInitialHash = false;
+
     const applyHash = () => {
       const hash = window.location.hash.replace(/^#/, '');
       if (hash === 'watts') {
         setView('watts');
       } else if (hash === 'canvas') {
         setView('canvas');
+      } else if (syncedInitialHash) {
+        // Browser back/forward cleared the fragment — return to the canvas.
+        setView('canvas');
       }
+      syncedInitialHash = true;
     };
+
     applyHash();
     window.addEventListener('hashchange', applyHash);
     return () => window.removeEventListener('hashchange', applyHash);
   }, [setView]);
-
-  useEffect(() => {
-    const desired = view === 'watts' ? '#watts' : '';
-    if (window.location.hash !== desired) {
-      const url = desired
-        ? `${window.location.pathname}${window.location.search}${desired}`
-        : `${window.location.pathname}${window.location.search}`;
-      window.history.replaceState(null, '', url);
-    }
-  }, [view]);
 
   if (view === 'watts') {
     return <WattsView />;

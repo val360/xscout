@@ -73,18 +73,34 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     setPreferences((current) => ({ ...current, ...changes }));
   }, []);
 
+  const setTheme = useCallback((theme: ThemeMode) => patch({ theme }), [patch]);
+  const setScrollMode = useCallback((scrollMode: ScrollMode) => patch({ scrollMode }), [patch]);
+  const setDrawerOpen = useCallback((drawerOpen: boolean) => patch({ drawerOpen }), [patch]);
+  const setDrawerWidth = useCallback((drawerWidth: number) => patch({ drawerWidth }), [patch]);
+  const setShowMinimap = useCallback((showMinimap: boolean) => patch({ showMinimap }), [patch]);
+  const setView = useCallback((view: AppView) => patch({ view }), [patch]);
+
   const value = useMemo<PreferencesContextValue>(
     () => ({
       ...preferences,
       resolvedTheme,
-      setTheme: (theme) => patch({ theme }),
-      setScrollMode: (scrollMode) => patch({ scrollMode }),
-      setDrawerOpen: (drawerOpen) => patch({ drawerOpen }),
-      setDrawerWidth: (drawerWidth) => patch({ drawerWidth }),
-      setShowMinimap: (showMinimap) => patch({ showMinimap }),
-      setView: (view) => patch({ view }),
+      setTheme,
+      setScrollMode,
+      setDrawerOpen,
+      setDrawerWidth,
+      setShowMinimap,
+      setView,
     }),
-    [patch, preferences, resolvedTheme],
+    [
+      preferences,
+      resolvedTheme,
+      setTheme,
+      setScrollMode,
+      setDrawerOpen,
+      setDrawerWidth,
+      setShowMinimap,
+      setView,
+    ],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
