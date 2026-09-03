@@ -115,16 +115,41 @@ function serializeNodes(nodes: CanvasNode[]): CanvasNode[] {
   }));
 }
 
-function getInitialCanvas(): LoadedCanvas {
+/**
+ * `loading` is only meaningful while a request is in flight. A canvas restored
+ * from storage (after a reload, or when the workspace remounts after a visit to
+ * the Watts view) has no such request, so a persisted `loading` would leave the
+ * card stuck on "Refreshing…" with its refresh button disabled.
+ */
+function withSettledStatus(node: CanvasNode): CanvasNode {
+  if (node.data.status !== 'loading') {
+    return node;
+  }
+  return { ...node, data: { ...node.data, status: 'idle' } };
+}
+
+type InitialCanvas = LoadedCanvas & {
+  /** Nodes whose refresh was cut short by the previous unmount. */
+  interruptedNodeIds: string[];
+};
+
+function getInitialCanvas(): InitialCanvas {
   const stored = loadCanvas();
   if (stored) {
-    return { ...stored, nodes: stored.nodes.map(withDefaultSize) };
+    return {
+      ...stored,
+      nodes: stored.nodes.map((node) => withDefaultSize(withSettledStatus(node))),
+      interruptedNodeIds: stored.nodes
+        .filter((node) => node.data.status === 'loading')
+        .map((node) => node.id),
+    };
   }
   return {
     nodes: [],
     edges: [] as Edge[],
     viewport: undefined,
     rawViewport: undefined,
+    interruptedNodeIds: [],
   };
 }
 
@@ -530,6 +555,22 @@ function Workspace() {
       return alive.length === current.length ? current : alive;
     });
   }, [listsStatus, listsById, setNodes]);
+
+  // Finish refreshes that were in flight when the canvas last unmounted. This
+  // waits for the list catalog because `refreshNode` reads tickers from it.
+  const resumeAttempted = useRef(false);
+  useEffect(() => {
+    if (resumeAttempted.current || listsStatus !== 'ready') {
+      return;
+    }
+    resumeAttempted.current = true;
+    for (const nodeId of initialCanvas.interruptedNodeIds) {
+      const node = nodesRef.current.find((entry) => entry.id === nodeId);
+      if (node && listsById[node.data.listId] !== undefined) {
+        void refreshNode(nodeId);
+      }
+    }
+  }, [initialCanvas.interruptedNodeIds, listsById, listsStatus, refreshNode]);
 
   // ------------------------------------------------------------------ rendering
 
