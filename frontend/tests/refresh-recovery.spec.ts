@@ -99,9 +99,26 @@ async function routePerformance(page: Page): Promise<PerformanceRouting> {
   };
 }
 
-async function seedStorage(page: Page, nodeStatus: string) {
+function listFixtures(count: number) {
+  return Array.from({ length: count }, (_, index) =>
+    index === 0
+      ? listFixture
+      : { id: `list-${index + 1}`, name: `Saved list ${index + 1}`, tickers: ['AAPL'] },
+  );
+}
+
+function nodeFixtures(count: number, status: string) {
+  return listFixtures(count).map((list, index) => ({
+    ...storedNode,
+    id: index === 0 ? storedNode.id : `node-${index + 1}`,
+    position: { x: 120 + (index % 2) * 600, y: 120 + Math.floor(index / 2) * 340 },
+    data: { ...storedNode.data, listId: list.id, name: list.name, status },
+  }));
+}
+
+async function seedStorage(page: Page, nodeStatus: string, count = 1) {
   await page.addInitScript(
-    ({ keys, node, status }) => {
+    ({ keys, nodes }) => {
       if (window.sessionStorage.getItem('xscout.test.seeded')) {
         return;
       }
@@ -119,26 +136,41 @@ async function seedStorage(page: Page, nodeStatus: string) {
       );
       window.localStorage.setItem(
         keys.canvas,
-        JSON.stringify({
-          nodes: [{ ...node, data: { ...node.data, status } }],
-          edges: [],
-        }),
+        JSON.stringify({ nodes, edges: [] }),
       );
     },
     {
       keys: { canvas: CANVAS_KEY_V3, preferences: PREFS_KEY },
-      node: storedNode,
-      status: nodeStatus,
+      nodes: nodeFixtures(count, nodeStatus),
     },
   );
 }
 
-async function routeLists(page: Page) {
+async function routeLists(page: Page, count = 1) {
   await page.route('**/api/ticker-lists', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ lists: [listFixture] }),
+      body: JSON.stringify({ lists: listFixtures(count) }),
+    }),
+  );
+}
+
+async function routeWatts(page: Page) {
+  await page.route('**/api/watts/dashboard**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generatedAt: '2026-01-01T00:00:00Z',
+        title: 'Watts',
+        subtitle: '',
+        thesis: '',
+        sourceNote: '',
+        northStar: { title: 'North star', lede: '', spreads: [] },
+        panels: [],
+        errors: [],
+      }),
     }),
   );
 }
@@ -213,22 +245,7 @@ test('switching to the Watts view mid-refresh and back does not leave the card s
   await seedStorage(page, 'idle');
   await routeLists(page);
   const performance = await routePerformance(page);
-  await page.route('**/api/watts/dashboard**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        generatedAt: '2026-01-01T00:00:00Z',
-        title: 'Watts',
-        subtitle: '',
-        thesis: '',
-        sourceNote: '',
-        northStar: { title: 'North star', lede: '', spreads: [] },
-        panels: [],
-        errors: [],
-      }),
-    }),
-  );
+  await routeWatts(page);
 
   await page.goto('/');
   await page.waitForSelector('.react-flow__node');
@@ -250,4 +267,47 @@ test('switching to the Watts view mid-refresh and back does not leave the card s
   await expect(nodeRefreshButton(page)).toBeEnabled({ timeout: 5_000 });
   await expect(page.locator('.ticker-node')).not.toHaveClass(/is-loading/);
   await expect(page.locator('.ticker-node')).toContainText('AAPL');
+});
+
+// With several cards, "Refresh all" fans out one request per card. A single
+// Gunicorn worker answers them one at a time, so some cards are usually still
+// waiting when the user navigates away; every one of them has to recover.
+test('every card recovers when Refresh all is interrupted by a view switch', async ({
+  page,
+}) => {
+  const count = 5;
+  await seedStorage(page, 'idle', count);
+  await routeLists(page, count);
+  const performance = await routePerformance(page);
+  await routeWatts(page);
+
+  await page.goto('/');
+  await expect(page.locator('.react-flow__node')).toHaveCount(count);
+
+  performance.hold();
+  await page.getByRole('button', { name: 'Refresh all' }).click();
+  await expect(page.locator('.ticker-node.is-loading')).toHaveCount(count);
+  await expect(page.getByRole('button', { name: 'Refreshing…' })).toBeDisabled();
+
+  await page.getByRole('tab', { name: 'Watts' }).click();
+  await expect(page.locator('.react-flow__node')).toHaveCount(0);
+
+  // Every original response lands while the canvas is unmounted, so none of
+  // them can update a card.
+  await performance.release();
+  performance.passthrough();
+
+  await page.getByRole('tab', { name: 'Canvas' }).click();
+  await expect(page.locator('.react-flow__node')).toHaveCount(count);
+
+  await expect(page.locator('.ticker-node.is-loading')).toHaveCount(0, { timeout: 10_000 });
+  await expect(nodeRefreshButton(page)).toHaveCount(count);
+  for (const button of await nodeRefreshButton(page).all()) {
+    await expect(button).toBeEnabled();
+  }
+  await expect(page.locator('.ticker-node__meta').filter({ hasText: 'Refreshing…' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Refresh all' })).toBeEnabled();
+  for (const card of await page.locator('.ticker-node').all()) {
+    await expect(card).toContainText('AAPL');
+  }
 });
